@@ -4,10 +4,11 @@
 
 ## Files
 
-| File        | Description                                           |
-| ----------- | ----------------------------------------------------- |
-| `rvmd.m`    | RVMD function                                         |
-| `test_1d.m` | 1D nonstationary signal decomposition test using RVMD |
+| File              | Description                                |
+| ----------------- | ------------------------------------------ |
+| `rvmd.m`          | RVMD function                              |
+| `test_1d.m`       | 1D nonstationary signal decomposition test |
+| `test_cylinder.m` | transient cylinder wakes test              |
 
 ## Reference
 [1] Liao, Z.-M., Zhao, Z., Chen, L.-B., Wan, Z.-H., Liu, N.-S. & Lu, X.-Y. 2023 Reduced-order variational mode decomposition: reveal transient and nonstationary dynamics in fluid flows. J. Fluid Mech. In press.
