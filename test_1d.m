@@ -38,10 +38,6 @@ title(['component 3\quad$\omega_3=', num2str(f_3 * fs), '$'], 'Interpreter', 'la
 xlabel('time','Interpreter', 'latex')
 set(gca, 'Box', 'on');
 
-% plot spectrum
-figure;
-pspectrum(f);
-
 %% parameters for RVMD
 K = 3;              % number of modes
 alpha = 1000;       % filtering parameter
@@ -85,4 +81,14 @@ ylabel('$\omega_k^n$', 'Interpreter', 'latex')
 
 % spectrum
 figure; hold on;
-pspectrum(c);
+f_spec = sum(abs(fft(f,[],2)).^2,1);
+f_spec_rec = sum(abs(fft(f_rec,[],2)).^2,1);
+nt = length(f_spec);
+nk = ceil(nt/2);
+freq = (0:(nk-1))/nt;
+c_spec = abs(fft(c,[],1)).^2;
+plot(freq,f_spec(1:nk),'LineStyle','-','Color','b')
+plot(freq,f_spec_rec(1:nk),'LineStyle','--','Color','m')
+plot(freq,c_spec(1:nk,:))
+legend('original','reconstructed','mode 1','mode 2','mode 3')
+set(gca,'XScale','log','YScale','log')

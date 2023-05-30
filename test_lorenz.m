@@ -10,16 +10,11 @@ load('data/data_lorenz.mat');
 
 x = x(1:10:end,:).';
 
-% plot spectrum
-figure;
-pspectrum(x.');
-set(gca,'XScale','log')
-
 %% parameters for RVMD
 K = 5;              % number of modes
-alpha = 3000;       % filtering parameter
+alpha = 1000;       % filtering parameter
 tol = 1e-4;         % tolerance
-N = 2000;           % maximum steps
+N = 8000;           % maximum steps
 init = 1;           % frequency initialization (1: uniformly distributed)
 initFreqMax = 0.2;  % frequency initialization
 
@@ -29,20 +24,23 @@ initFreqMax = 0.2;  % frequency initialization
 
 %% post-processing
 % energy rank
-[~,rank] = maxk(energy,K);
+[~,index] = maxk(energy,K);
+for k = 1:K
+    rank(index(k)) = k;
+end
 
-% RVMD results (time-evolution coefficients)
+% time-evolution coefficients
 x_rec = phi * c.';
 figure;
 subplot(K + 2, 1, 1:2);
-plot(x_rec', '-b');
+plot(x_rec', '-k');
 xticklabels([])
 title('RVMD reconstructed data', ...
     'Interpreter', 'latex');
 
 for k = 1:K
     subplot(K + 2, 1, k + 2); hold on;
-    plot(c(:, k), '-b');
+    plot(c(:, k), '-k');
     title(['mode ', num2str(k), '\quad$\omega_', num2str(k), '$=', ...
         num2str(omega(k)),'\quad energy rank ',num2str(rank(k)), ...
         ' $E_', num2str(k), '$=',num2str(energy(k))], 'Interpreter', 'latex')
@@ -55,47 +53,62 @@ for k = 1:K
     set(gca, 'Box', 'on');
 end
 
-% mode
+% modes
 figure;
 for k = 1:K
     subplot(1, K, k); hold on;
-    plot(phi(:, k), '-b');
+    plot(phi(:, k), '-k');
     title(['mode ', num2str(k), '\quad$\omega_', num2str(k), '$=', ...
         num2str(omega(k))], 'Interpreter', 'latex')
-    if (k ~= K)
-        xticklabels([])
-    else
-        xlabel('x','Interpreter', 'latex')
-    end
+    xlabel('x','Interpreter', 'latex')
     ylim([-1,1])
     set(gca, 'Box', 'on');
 end
 
-% convergence curve
+% spectrum
+x_spec = sum(abs(fft(x,[],2)).^2,1);
+x_spec_rec = sum(abs(fft(x_rec,[],2)).^2,1);
+nt = length(x_spec);
+nk = ceil(nt/2);
+freq = (0:(nk-1))/nt;
+c_spec = abs(fft(c,[],1)).^2;
+
+figure;
+for k = 1:K
+    subplot(K, 1, k); hold on;
+    plot(freq,x_spec(1:nk),'LineStyle','-','Color','b')
+    plot(freq,x_spec_rec(1:nk),'LineStyle','--','Color','m')
+    plot(freq,c_spec(1:nk,k),'Color','k')
+    set(gca,'XScale','log','YScale','log')
+    title(['mode ', num2str(k), '\quad$\omega_', num2str(k), '$=', ...
+        num2str(omega(k))], 'Interpreter', 'latex')
+    xlabel('x','Interpreter', 'latex')
+end
+
+%% convergence curve
 figure;
 plot(omega_iter.')
 xlabel('iteration step $n$', 'Interpreter', 'latex');
 ylabel('$\omega_k^n$', 'Interpreter', 'latex')
 
-% spectrum
-figure; hold on;
-pspectrum(c);
-set(gca,'XScale','log')
-
-%% recontruction
+%% mode recontruction
+% inividual mode
 for k = 1:K
     figure;
     for i = 1:3
         subplot(3, 1, i); hold on;
         plot(x(i,:), '-b');
         plot(x_rec(i,:), '--m');
-        %         if k ~=1 && k~=2
-        %             plot(phi(i,k)*c(:,k)+phi(i,1)*c(:,1)+phi(i,2)*c(:,2), '-k');
-        %         else
         plot(phi(i,k)*c(:,k), '-k');
-        %         end
+        if i==1
+            title(['mode ', num2str(k), '\quad$\omega_', num2str(k), '$=', ...
+                num2str(omega(k)),'\quad energy rank ',num2str(rank(k)), ...
+                ' $E_', num2str(k), '$=',num2str(energy(k))], 'Interpreter', 'latex')
+        end
     end
-    title(['mode ', num2str(k), '\quad$\omega_', num2str(k), '$=', ...
-        num2str(omega(k)),'\quad energy rank ',num2str(rank(k)), ...
-        ' $E_', num2str(k), '$=',num2str(energy(k))], 'Interpreter', 'latex')
 end
+
+% all modes
+figure; hold on;
+plot3(x(1,:),x(2,:),x(3,:), '-b');
+plot3(x_rec(1,:),x_rec(2,:),x_rec(3,:), '--m');
