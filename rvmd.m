@@ -31,9 +31,9 @@ function [phi, c, omega, energy, omega_iter, diff_iter] = rvmd(Q, K, alpha, vara
 %       initFreqMax     0.5
 % Reference
 %   [1] Liao, Z.-M., Zhao, Z., Chen, L.-B., Wan, Z.-H., Liu, N.-S.
-%       & Lu, X.-Y. 2023 Reduced-order variational mode decomposition:
-%       reveal transient and nonstationary dynamics in fluid flows.
-%       J. Fluid Mech. In press.
+%       & Lu, X.-Y. 2023 Reduced-order variational mode decomposition 
+%       to reveal transient and non-stationary dynamics in fluid flows.
+%       J. Fluid Mech., 966, A7. doi:10.1017/jfm.2023.435
 
 
 %% pre-processing
