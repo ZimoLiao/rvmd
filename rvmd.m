@@ -43,8 +43,8 @@ S = size(Q_origin, 1); % spatial dimension
 T_origin = size(Q_origin, 2); % original temporal dimension
 
 Q(:, 1:ceil(T_origin / 2)) = Q_origin(:, ceil(T_origin / 2):-1:1);
-Q(:, ceil(T_origin / 2 + 1):3 * ceil(T_origin / 2)) = Q_origin;
-Q(:, ceil(3 * T_origin / 2 + 1):2 * T_origin) = ...
+Q(:, ceil(T_origin / 2 + 1):ceil(T_origin / 2) + T_origin) = Q_origin;
+Q(:, (ceil(T_origin / 2) + T_origin + 1):2 * T_origin) = ...
     Q_origin(:, T_origin:-1:ceil(T_origin / 2 + 1));
 
 T = size(Q, 2); % temporal dimension

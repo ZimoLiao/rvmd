@@ -13,7 +13,7 @@ f_2 = 24;
 f_3 = 288;
 % components
 v_1 = (cos(2 * pi * f_1 * t));
-v_2 = 1/4 * (cos(2 * pi * f_2 * t)) .* (10 * t.^2) .* [ones(1, T / 2), zeros(1, T / 2)];
+v_2 = 1/4 * (cos(2 * pi * f_2 * t)) .* (10 * t.^2) .* [ones(1, ceil(T / 2)), zeros(1, floor(T / 2))];
 v_3 = 1/16 * (cos(2 * pi * f_3 * t));
 noiseAmp = 1/24;
 % composite signal, including noise
