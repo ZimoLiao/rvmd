@@ -162,7 +162,7 @@ omega = omega_k(:, n);
 c_spec = c_spec_n;
 c_spec(T_spec + 1:T, :) = conj(c_spec_n(end - 1:-1:2, :));
 c = ifft(c_spec);
-c = c(T / 4 + 1:3 * T / 4, :);
+c = c(ceil(T_origin / 2 + 1):ceil(T_origin / 2) + T_origin, :);
 % c_spec=fft(c,[],1);
 
 % sort the RVMD modes from low frequency to high frequency
