@@ -19,18 +19,24 @@ init = 1;           % frequency initialization (1: uniformly distributed)
 initFreqMax = 0.2;  % frequency initialization
 
 %% computation
-[phi, c, omega, energy, omega_iter, diff_iter] = ...
-    rvmd(x, K, alpha, tol, N, init, initFreqMax);
+% [phi, c, omega, energy, omega_iter, diff_iter] = ...
+%     rvmd(x, K, alpha, tol, N, init, initFreqMax);
+
+tic
+[mode, info] = ...
+    rvmd(x, K, alpha, 'Tolerance', tol, 'MaximumSteps', N, 'InitFreqType', init, 'InitFreqMaximum', initFreqMax, ...
+    'FloatPrecision', 'single');
+toc
 
 %% post-processing
 % energy rank
-[~,index] = maxk(energy,K);
+[~,index] = maxk(mode.energy,K);
 for k = 1:K
     rank(index(k)) = k;
 end
 
 % time-evolution coefficients
-x_rec = phi * c.';
+x_rec = mode.phi * mode.c.';
 figure;
 subplot(K + 2, 1, 1:2);
 plot(x_rec', '-k');
@@ -40,10 +46,10 @@ title('RVMD reconstructed data', ...
 
 for k = 1:K
     subplot(K + 2, 1, k + 2); hold on;
-    plot(c(:, k), '-k');
+    plot(mode.c(:, k), '-k');
     title(['mode ', num2str(k), '\quad$\omega_', num2str(k), '$=', ...
-        num2str(omega(k)),'\quad energy rank ',num2str(rank(k)), ...
-        ' $E_', num2str(k), '$=',num2str(energy(k))], 'Interpreter', 'latex')
+        num2str(mode.omega(k)),'\quad energy rank ',num2str(rank(k)), ...
+        ' $E_', num2str(k), '$=',num2str(mode.energy(k))], 'Interpreter', 'latex')
     if (k ~= K)
         xticklabels([])
     else
@@ -57,9 +63,9 @@ end
 figure;
 for k = 1:K
     subplot(1, K, k); hold on;
-    plot(phi(:, k), '-k');
+    plot(mode.phi(:, k), '-k');
     title(['mode ', num2str(k), '\quad$\omega_', num2str(k), '$=', ...
-        num2str(omega(k))], 'Interpreter', 'latex')
+        num2str(mode.omega(k))], 'Interpreter', 'latex')
     xlabel('x','Interpreter', 'latex')
     ylim([-1,1])
     set(gca, 'Box', 'on');
@@ -71,7 +77,7 @@ x_spec_rec = sum(abs(fft(x_rec,[],2)).^2,1);
 nt = length(x_spec);
 nk = ceil(nt/2);
 freq = (0:(nk-1))/nt;
-c_spec = abs(fft(c,[],1)).^2;
+c_spec = abs(fft(mode.c,[],1)).^2;
 
 figure;
 for k = 1:K
@@ -81,13 +87,13 @@ for k = 1:K
     plot(freq,c_spec(1:nk,k),'Color','k')
     set(gca,'XScale','log','YScale','log')
     title(['mode ', num2str(k), '\quad$\omega_', num2str(k), '$=', ...
-        num2str(omega(k))], 'Interpreter', 'latex')
+        num2str(mode.omega(k))], 'Interpreter', 'latex')
     xlabel('x','Interpreter', 'latex')
 end
 
 %% convergence curve
 figure;
-plot(omega_iter.')
+plot(info.Iteration.omega.')
 xlabel('iteration step $n$', 'Interpreter', 'latex');
 ylabel('$\omega_k^n$', 'Interpreter', 'latex')
 
@@ -99,11 +105,11 @@ for k = 1:K
         subplot(3, 1, i); hold on;
         plot(x(i,:), '-b');
         plot(x_rec(i,:), '--m');
-        plot(phi(i,k)*c(:,k), '-k');
+        plot(mode.phi(i,k)*mode.c(:,k), '-k');
         if i==1
             title(['mode ', num2str(k), '\quad$\omega_', num2str(k), '$=', ...
-                num2str(omega(k)),'\quad energy rank ',num2str(rank(k)), ...
-                ' $E_', num2str(k), '$=',num2str(energy(k))], 'Interpreter', 'latex')
+                num2str(mode.omega(k)),'\quad energy rank ',num2str(rank(k)), ...
+                ' $E_', num2str(k), '$=',num2str(mode.energy(k))], 'Interpreter', 'latex')
         end
     end
 end

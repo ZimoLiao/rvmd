@@ -47,12 +47,17 @@ init = 1;           % frequency initialization (1: uniformly distributed)
 initFreqMax = 0.3;  % frequency initialization
 
 %% computation
-[phi, c, omega, energy, omega_iter, diff_iter] = ...
-    rvmd(f, K, alpha, tol, N, init, initFreqMax);
+% [phi, c, omega, energy, omega_iter, diff_iter] = ...
+%     rvmd(f, K, alpha, tol, N, init, initFreqMax);
+
+[mode, info] = ...
+    rvmd(f, K, alpha, 'Tolerance', tol, 'MaximumSteps', N, ...
+    'InitFreqType', init, 'InitFreqMaximum', initFreqMax, ...
+    'Device', 'cpu', 'FloatPrecision', 'double');
 
 %% post-processing
 % RVMD results (time-evolution coefficients)
-f_rec = phi * c.';
+f_rec = mode.phi * mode.c.';
 figure;
 subplot(K + 2, 1, 1:2);
 plot(f_rec', '-b');
@@ -62,9 +67,9 @@ title('RVMD reconstructed data', ...
 
 for k = 1:K
     subplot(K + 2, 1, k + 2); hold on;
-    plot(t,c(:, k), '-b');
+    plot(t,mode.c(:, k), '-b');
     title(['mode ', num2str(k), '\quad$\omega_', num2str(k), '$=', ...
-        num2str(omega(k))], 'Interpreter', 'latex')
+        num2str(mode.omega(k))], 'Interpreter', 'latex')
     if (k ~= K)
         xticklabels([])
     else
@@ -75,7 +80,7 @@ end
 
 % convergence curve
 figure;
-plot(omega_iter.')
+plot(info.Iteration.omega.')
 xlabel('iteration step $n$', 'Interpreter', 'latex');
 ylabel('$\omega_k^n$', 'Interpreter', 'latex')
 
@@ -86,7 +91,7 @@ f_spec_rec = sum(abs(fft(f_rec,[],2)).^2,1);
 nt = length(f_spec);
 nk = ceil(nt/2);
 freq = (0:(nk-1))/nt;
-c_spec = abs(fft(c,[],1)).^2;
+c_spec = abs(fft(mode.c,[],1)).^2;
 plot(freq,f_spec(1:nk),'LineStyle','-','Color','b')
 plot(freq,f_spec_rec(1:nk),'LineStyle','--','Color','m')
 plot(freq,c_spec(1:nk,:))

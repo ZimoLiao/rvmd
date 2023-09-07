@@ -1,0 +1,66 @@
+{
+    "_schemaVersion": "1.0.0",
+    "rvmd": {
+        "inputs": [
+            {
+                "name": "Q",
+                "kind": "required",
+                "type": [
+                    "numeric"
+                ],
+                "purpose": "data matrix"
+            },
+            {
+                "name": "K",
+                "kind": "required",
+                "type": [
+                    "numeric",
+                    "integer",
+                    "scalar",
+                    ">0"
+                ],
+                "purpose": "number of modes"
+            },
+            {
+                "name": "alpha",
+                "kind": "required",
+                "type": [
+                    "numeric",
+                    "scalar",
+                    ">0"
+                ],
+                "purpose": "filtering parameter"
+            },
+            {
+                "name": "Tolerance",
+                "kind": "namevalue",
+                "purpose": "tolerance for iteration"
+            },
+            {
+                "name": "MaximumSteps",
+                "kind": "namevalue",
+                "purpose": "maximum number of iteration step"
+            },
+            {
+                "name": "InitFreqType",
+                "kind": "namevalue",
+                "type": "choices={-1,0,1}",
+                "purpose": "frequency initialization type"
+            },
+            {
+                "name": "InitFreqMaximum",
+                "kind": "namevalue"
+            },
+            {
+                "name": "Device",
+                "type": "choices={'gpu','cpu'}",
+                "kind": "namevalue"
+            },
+            {
+                "name": "FloatPrecision",
+                "type": "choices={'single','double'}",
+                "kind": "namevalue"
+            }
+        ]
+    }
+}
