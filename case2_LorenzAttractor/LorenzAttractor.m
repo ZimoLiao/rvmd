@@ -60,6 +60,7 @@ for k = 1:K
     ylim([-35,35])
     set(gca, 'Box', 'on');
 end
+set(gcf,'Color','white')
 
 % modes
 figure;
@@ -72,6 +73,7 @@ for k = 1:K
     ylim([-1,1])
     set(gca, 'Box', 'on');
 end
+set(gcf,'Color','white')
 
 % spectrum
 x_spec = sum(abs(fft(x,[],2)).^2,1);
@@ -92,12 +94,14 @@ for k = 1:K
         num2str(mode.omega(k))], 'Interpreter', 'latex')
     xlabel('x','Interpreter', 'latex')
 end
+set(gcf,'Color','white')
 
 %% convergence curve
 figure;
 plot(info.Iteration.omega.')
 xlabel('iteration step $n$', 'Interpreter', 'latex');
 ylabel('$\omega_k^n$', 'Interpreter', 'latex')
+set(gcf,'Color','white')
 
 %% mode recontruction
 % inividual mode
@@ -105,6 +109,8 @@ for k = 1:K
     figure;
     for i = 1:3
         subplot(3, 1, i); hold on;
+        yline(8.485,'Color',[0.5,0.5,0.5])
+        yline(-8.485,'Color',[0.5,0.5,0.5])
         plot(x(i,:), '-b');
         plot(x_rec(i,:), '--m');
         plot(mode.phi(i,k)*mode.c(:,k), '-k');
@@ -114,9 +120,11 @@ for k = 1:K
                 ' $E_', num2str(k), '$=',num2str(mode.energy(k))], 'Interpreter', 'latex')
         end
     end
+    set(gcf,'Color','white')
 end
 
 % all modes
 figure; hold on;
 plot3(x(1,:),x(2,:),x(3,:), '-b');
 plot3(x_rec(1,:),x_rec(2,:),x_rec(3,:), '--m');
+set(gcf,'Color','white')

@@ -2,6 +2,8 @@
 clear
 close all
 
+addpath '../'
+
 %% load data
 [skeleton,time] = loadbvh('49_03.bvh');
 Njoints = numel(skeleton);
@@ -85,118 +87,118 @@ ylim([1e2,1e11])
 % end
 
 %% mode
-k_low = [1:6];
-k_high = [11:K];
-
-vidObj = VideoWriter('MotionCapture'); open(vidObj);
-
-figure;
-for t = 1:2:info.T
-    subplot(4,3,[1,4,7])
-    for nn = 1:Njoints
-        plot3(q(3*nn,t),q(3*nn-2,t),q(3*nn-1,t),'.','MarkerSize',20,'Color','k'); hold on;
-        if parent(nn) ~= 0
-            plot3([q(3*parent(nn),t), q(3*nn,t)],...
-                [q(3*parent(nn)-2,t), q(3*nn-2,t)],...
-                [q(3*parent(nn)-1,t), q(3*nn-1,t)],'Color','k');
-        end
-        
-        zz = rec(3*nn,t)+q_mean(3*nn);
-        xx = rec(3*nn-2,t)+q_mean(3*nn-2);
-        yy = rec(3*nn-1,t)+q_mean(3*nn-1);
-        plot3(zz,xx,yy,'.','MarkerSize',20,'Color','m'); hold on;
-        if parent(nn) ~= 0
-            zzp = rec(3*parent(nn),t)+q_mean(3*parent(nn));
-            xxp = rec(3*parent(nn)-2,t)+q_mean(3*parent(nn)-2);
-            yyp = rec(3*parent(nn)-1,t)+q_mean(3*parent(nn)-1);
-            if parent(nn) ~= 0
-                plot3([zzp, zz],...
-                    [xxp, xx],...
-                    [yyp, yy],'Color','m');
-            end
-        end
-    end
-    xlabel('Z')
-    ylabel('X')
-    zlabel('Y')
-    axis equal
-    xlim([0,14])
-    ylim([-12,12])
-    zlim([0,35])
-    v = [5 2 3];
-    [caz,cel] = view(v);
-    hold off;
-    title('Motion')
-    
-    subplot(4,3,[2,5,8])
-    for nn = 1:Njoints
-        zz = sum(rec_mode(3*nn,t,k_low),3)+q_mean(3*nn);
-        xx = sum(rec_mode(3*nn-2,t,k_low),3)+q_mean(3*nn-2);
-        yy = sum(rec_mode(3*nn-1,t,k_low),3)+q_mean(3*nn-1);
-        plot3(zz,xx,yy,'.','MarkerSize',20,'Color','r'); hold on;
-        if parent(nn) ~= 0
-            zzp = sum(rec_mode(3*parent(nn),t,k_low),3)+q_mean(3*parent(nn));
-            xxp = sum(rec_mode(3*parent(nn)-2,t,k_low),3)+q_mean(3*parent(nn)-2);
-            yyp = sum(rec_mode(3*parent(nn)-1,t,k_low),3)+q_mean(3*parent(nn)-1);
-            if parent(nn) ~= 0
-                plot3([zzp, zz],...
-                    [xxp, xx],...
-                    [yyp, yy],'Color','r');
-            end
-        end
-    end
-    xlabel('Z')
-    ylabel('X')
-    zlabel('Y')
-    axis equal
-    xlim([0,14])
-    ylim([-12,12])
-    zlim([0,35])
-    v = [5 2 3];
-    [caz,cel] = view(v);
-    hold off;
-    title('Low frequency (Leg lifting modes)')
-    subplot(4,3,11)
-    plot(mode.c(:,k_low),'Color',[0.5,0.5,0.5]); hold on;
-    plot(mode.c(1:t,k_low)); hold off;
-    
-    subplot(4,3,[3,6,9])
-    for nn = 1:Njoints
-        zz = sum(rec_mode(3*nn,t,k_high),3)+q_mean(3*nn);
-        xx = sum(rec_mode(3*nn-2,t,k_high),3)+q_mean(3*nn-2);
-        yy = sum(rec_mode(3*nn-1,t,k_high),3)+q_mean(3*nn-1);
-        plot3(zz,xx,yy,'.','MarkerSize',20,'Color','b'); hold on;
-        if parent(nn) ~= 0
-            zzp = sum(rec_mode(3*parent(nn),t,k_high),3)+q_mean(3*parent(nn));
-            xxp = sum(rec_mode(3*parent(nn)-2,t,k_high),3)+q_mean(3*parent(nn)-2);
-            yyp = sum(rec_mode(3*parent(nn)-1,t,k_high),3)+q_mean(3*parent(nn)-1);
-            if parent(nn) ~= 0
-                plot3([zzp, zz],...
-                    [xxp, xx],...
-                    [yyp, yy],'Color','b');
-            end
-        end
-    end
-    xlabel('Z')
-    ylabel('X')
-    zlabel('Y')
-    axis equal
-    xlim([0,14])
-    ylim([-12,12])
-    zlim([0,35])
-    v = [5 2 3];
-    [caz,cel] = view(v);
-    hold off;
-    title('High frequency (Jumping modes)')
-    subplot(4,3,12)
-    plot(mode.c(:,k_high),'Color',[0.5,0.5,0.5]); hold on;
-    plot(mode.c(1:t,k_high)); hold off;
-    
-    set(gcf,'Position',[100,100,1200,600],'Color','white')
-    %     pause(0.001);
-    
-    drawnow
-    writeVideo(vidObj,getframe(gcf));
-end
-
-close(vidObj)
+% k_low = [1:6];
+% k_high = [11:K];
+% 
+% vidObj = VideoWriter('MotionCapture'); open(vidObj);
+% 
+% figure;
+% for t = 1:2:info.T
+%     subplot(4,3,[1,4,7])
+%     for nn = 1:Njoints
+%         plot3(q(3*nn,t),q(3*nn-2,t),q(3*nn-1,t),'.','MarkerSize',20,'Color','k'); hold on;
+%         if parent(nn) ~= 0
+%             plot3([q(3*parent(nn),t), q(3*nn,t)],...
+%                 [q(3*parent(nn)-2,t), q(3*nn-2,t)],...
+%                 [q(3*parent(nn)-1,t), q(3*nn-1,t)],'Color','k');
+%         end
+%         
+%         zz = rec(3*nn,t)+q_mean(3*nn);
+%         xx = rec(3*nn-2,t)+q_mean(3*nn-2);
+%         yy = rec(3*nn-1,t)+q_mean(3*nn-1);
+%         plot3(zz,xx,yy,'.','MarkerSize',20,'Color','m'); hold on;
+%         if parent(nn) ~= 0
+%             zzp = rec(3*parent(nn),t)+q_mean(3*parent(nn));
+%             xxp = rec(3*parent(nn)-2,t)+q_mean(3*parent(nn)-2);
+%             yyp = rec(3*parent(nn)-1,t)+q_mean(3*parent(nn)-1);
+%             if parent(nn) ~= 0
+%                 plot3([zzp, zz],...
+%                     [xxp, xx],...
+%                     [yyp, yy],'Color','m');
+%             end
+%         end
+%     end
+%     xlabel('Z')
+%     ylabel('X')
+%     zlabel('Y')
+%     axis equal
+%     xlim([0,14])
+%     ylim([-12,12])
+%     zlim([0,35])
+%     v = [5 2 3];
+%     [caz,cel] = view(v);
+%     hold off;
+%     title('Motion')
+%     
+%     subplot(4,3,[2,5,8])
+%     for nn = 1:Njoints
+%         zz = sum(rec_mode(3*nn,t,k_low),3)+q_mean(3*nn);
+%         xx = sum(rec_mode(3*nn-2,t,k_low),3)+q_mean(3*nn-2);
+%         yy = sum(rec_mode(3*nn-1,t,k_low),3)+q_mean(3*nn-1);
+%         plot3(zz,xx,yy,'.','MarkerSize',20,'Color','r'); hold on;
+%         if parent(nn) ~= 0
+%             zzp = sum(rec_mode(3*parent(nn),t,k_low),3)+q_mean(3*parent(nn));
+%             xxp = sum(rec_mode(3*parent(nn)-2,t,k_low),3)+q_mean(3*parent(nn)-2);
+%             yyp = sum(rec_mode(3*parent(nn)-1,t,k_low),3)+q_mean(3*parent(nn)-1);
+%             if parent(nn) ~= 0
+%                 plot3([zzp, zz],...
+%                     [xxp, xx],...
+%                     [yyp, yy],'Color','r');
+%             end
+%         end
+%     end
+%     xlabel('Z')
+%     ylabel('X')
+%     zlabel('Y')
+%     axis equal
+%     xlim([0,14])
+%     ylim([-12,12])
+%     zlim([0,35])
+%     v = [5 2 3];
+%     [caz,cel] = view(v);
+%     hold off;
+%     title('Low frequency (Leg lifting modes)')
+%     subplot(4,3,11)
+%     plot(mode.c(:,k_low),'Color',[0.5,0.5,0.5]); hold on;
+%     plot(mode.c(1:t,k_low)); hold off;
+%     
+%     subplot(4,3,[3,6,9])
+%     for nn = 1:Njoints
+%         zz = sum(rec_mode(3*nn,t,k_high),3)+q_mean(3*nn);
+%         xx = sum(rec_mode(3*nn-2,t,k_high),3)+q_mean(3*nn-2);
+%         yy = sum(rec_mode(3*nn-1,t,k_high),3)+q_mean(3*nn-1);
+%         plot3(zz,xx,yy,'.','MarkerSize',20,'Color','b'); hold on;
+%         if parent(nn) ~= 0
+%             zzp = sum(rec_mode(3*parent(nn),t,k_high),3)+q_mean(3*parent(nn));
+%             xxp = sum(rec_mode(3*parent(nn)-2,t,k_high),3)+q_mean(3*parent(nn)-2);
+%             yyp = sum(rec_mode(3*parent(nn)-1,t,k_high),3)+q_mean(3*parent(nn)-1);
+%             if parent(nn) ~= 0
+%                 plot3([zzp, zz],...
+%                     [xxp, xx],...
+%                     [yyp, yy],'Color','b');
+%             end
+%         end
+%     end
+%     xlabel('Z')
+%     ylabel('X')
+%     zlabel('Y')
+%     axis equal
+%     xlim([0,14])
+%     ylim([-12,12])
+%     zlim([0,35])
+%     v = [5 2 3];
+%     [caz,cel] = view(v);
+%     hold off;
+%     title('High frequency (Jumping modes)')
+%     subplot(4,3,12)
+%     plot(mode.c(:,k_high),'Color',[0.5,0.5,0.5]); hold on;
+%     plot(mode.c(1:t,k_high)); hold off;
+%     
+%     set(gcf,'Position',[100,100,1200,600],'Color','white')
+%     %     pause(0.001);
+%     
+%     drawnow
+%     writeVideo(vidObj,getframe(gcf));
+% end
+% 
+% close(vidObj)
