@@ -57,7 +57,7 @@
                 "kind": "namevalue"
             },
             {
-                "name": "FloatPrecision",
+                "name": "FPPrecision",
                 "type": "choices={'single','double'}",
                 "kind": "namevalue"
             }

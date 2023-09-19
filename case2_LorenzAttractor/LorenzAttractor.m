@@ -27,7 +27,7 @@ initFreqMax = 0.2;  % frequency initialization
 tic
 [mode, info] = ...
     rvmd(x, K, alpha, 'Tolerance', tol, 'MaximumSteps', N, 'InitFreqType', init, 'InitFreqMaximum', initFreqMax, ...
-    'FloatPrecision', 'single');
+    'FPPrecision', 'single');
 toc
 
 %% post-processing

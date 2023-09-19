@@ -1,6 +1,36 @@
 function [mode, info] = rvmd(Q, K, Alpha, varargin)
 % Reduced-order variational mode decomposition (RVMD)
+%
 % Description
+%   [mode, info] = rvmd(Q, K, Alpha) return the RVMD results of the data
+%   matrix Q whose first dimension is space, i.e., size(Q)=[S, T], where
+%   S and T denote the numbers of sampling points in space and time,
+%   respectively. K is the number of modes, and Alpha is the filtering
+%   parameter. The columns of mode.phi are the spatial modes, and the
+%   columns of mode.c are the time-evolution coefficients. mode.omega and
+%   mode.energy are the central frequencies and mode energy, respectively.
+%   The struct info contains information about the present decomposition,
+%   including parameter setups and options.
+%
+%   [...] = rvmd(Q, K, Alpha, Name, Value) specifies the decomposition
+%   options using one or more Name, Value pair arguments. Here is the list
+%   of properties:
+%   Properties:
+%       'Tolerance' - tolerance value for the stopping criterion of RVMD
+%       iteration
+%       'MaximumSteps' - maximum number of iteration steps for the stopping
+%       criterion of RVMD iteration
+%       'InitFreqType' - specifies how to initialize the central frequencies
+%       in domain [0, min(InitFreqMaximum, 0.5)]
+%           Value	Strategy
+%           -1    	randomly distributed
+%       	0      	all zero
+%           1     	uniformly distributed
+%       'InitFreqMaximum' - specifies the domain of initial central
+%       frequencies [0, min(InitFreqMaximum, 0.5)]
+%       'Device' - device on which computation is performed: `cpu' or `gpu'
+%       'FPPrecision' - float-pointing precision for RVMD computation:
+%       `single' or `double'
 %
 % Reference
 %   [1] Liao, Z.-M., Zhao, Z., Chen, L.-B., Wan, Z.-H., Liu, N.-S.
@@ -19,8 +49,8 @@ default_Tolerance = 5e-3;
 default_MaximumSteps = 500;
 default_InitFreqType = FREQUNIFORM;
 default_InitFreqMaximum = FREQMAXIMUM;
-default_Device = 'gpu';
-default_FloatPrecision = 'single';
+default_Device = 'cpu';
+default_FPPrecision = 'single';
 
 % input parser
 p = inputParser;
@@ -33,7 +63,7 @@ addParameter(p, 'MaximumSteps', default_MaximumSteps);
 addParameter(p, 'InitFreqType', default_InitFreqType);
 addParameter(p, 'InitFreqMaximum', default_InitFreqMaximum);
 addParameter(p, 'Device', default_Device);
-addParameter(p, 'FloatPrecision', default_FloatPrecision);
+addParameter(p, 'FPPrecision', default_FPPrecision);
 parse(p, Q, K, Alpha, varargin{:});
 
 % parameters
@@ -46,9 +76,9 @@ info.MaximumSteps = p.Results.MaximumSteps;
 info.InitFreqType = p.Results.InitFreqType;
 info.InitFreqMaximum = min(p.Results.InitFreqMaximum, FREQMAXIMUM);
 info.Device = p.Results.Device;
-info.FloatPrecision = p.Results.FloatPrecision;
+info.FPPrecision = p.Results.FPPrecision;
 
-Type = p.Results.FloatPrecision;
+Type = p.Results.FPPrecision;
 N = p.Results.MaximumSteps;
 
 %% pre-processing
