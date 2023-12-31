@@ -16,7 +16,7 @@ x = x(1:10:end,:).';
 K = 5;              % number of modes
 alpha = 1000;       % filtering parameter
 tol = 1e-4;         % tolerance
-N = 8000;           % maximum steps
+N = 200;            % maximum steps
 init = 1;           % frequency initialization (1: uniformly distributed)
 initFreqMax = 0.2;  % frequency initialization
 
@@ -25,8 +25,15 @@ initFreqMax = 0.2;  % frequency initialization
 %     rvmd(x, K, alpha, tol, N, init, initFreqMax);
 
 tic
-[mode, info] = ...
-    rvmd(x, K, alpha, 'Tolerance', tol, 'MaximumSteps', N, 'InitFreqType', init, 'InitFreqMaximum', initFreqMax, ...
+[~, ~, restart] = ...
+    rvmd_new(x, K, alpha, 'Tolerance', tol, 'MaximumSteps', N, 'InitFreqType', init, 'InitFreqMaximum', initFreqMax, ...
+    'FPPrecision', 'single');
+toc
+
+tic
+N = 8000;
+[mode, info, ~] = ...
+    rvmd_new('Restart', restart, 'Tolerance', tol, 'MaximumSteps', N, 'InitFreqType', init, 'InitFreqMaximum', initFreqMax, ...
     'FPPrecision', 'single');
 toc
 

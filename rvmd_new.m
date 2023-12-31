@@ -1,4 +1,4 @@
-function [mode, info] = rvmd_new(Q, K, Alpha, varargin)
+function [mode, info, restart] = rvmd_new(Q, K, Alpha, varargin)
 % Reduced-order variational mode decomposition (RVMD)
 %
 % Description
@@ -10,12 +10,14 @@ function [mode, info] = rvmd_new(Q, K, Alpha, varargin)
 %   columns of mode.c are the time-evolution coefficients. mode.omega and
 %   mode.energy are the central frequencies and mode energy, respectively.
 %   The struct info contains information about the present decomposition,
-%   including parameter setups and options.
+%   including parameter setups and options. The struct restart contains
+%   data for restart computation.
 %
 %   [...] = rvmd(Q, K, Alpha, Name, Value) specifies the decomposition
 %   options using one or more Name, Value pair arguments. Here is the list
 %   of properties:
 %   Properties:
+%       'Restart' - input restart data to continue computation
 %       'Weight' - weight vector for computing RVMD, default: identity
 %       matrix
 %       'Tolerance' - tolerance value for the stopping criterion of RVMD
@@ -56,10 +58,14 @@ default_FPPrecision = 'single';
 
 % input parser
 p = inputParser;
-addRequired(p, 'Q');
-validScalar = @(x) isnumeric(x) && (x>0);
-addRequired(p, 'K', validScalar);
-addRequired(p, 'alpha', validScalar);
+% addRequired(p, 'Q');
+% validScalar = @(x) isnumeric(x) && (x>0);
+% addRequired(p, 'K', validScalar);
+% addRequired(p, 'alpha', validScalar);
+addOptional(p, 'Q', 1);
+addOptional(p, 'K', 1);
+addOptional(p, 'alpha', 1);
+addParameter(p, 'Restart', 0);
 addParameter(p, 'Weight', 1);
 addParameter(p, 'Tolerance', default_Tolerance);
 addParameter(p, 'MaximumSteps', default_MaximumSteps);
@@ -84,6 +90,24 @@ info.FPPrecision = p.Results.FPPrecision;
 
 Type = p.Results.FPPrecision;
 N = p.Results.MaximumSteps;
+
+% restart data
+opt_restart = 0;
+if (isfield(p.Results.Restart,'Q') ~= 0)
+    restart = p.Results.Restart;
+    opt_restart = 1;
+
+    info.S = restart.S;
+    info.T = restart.T;
+    info.K = restart.K;
+    info.alpha = restart.alpha;
+    K = restart.K;
+    Alpha = restart.alpha;
+    info.weight = restart.weight;
+    info.Iteration = restart.Iteration;
+
+    Q = restart.Q;
+end
 
 %% pre-processing
 S = info.S;
@@ -111,22 +135,28 @@ if (info.weight ~= 1 && length(info.weight) == S)
 end
 
 % mirror extension
-Q_origin = Q; Q = zeros(S, T, Type);
+restart.Q = Q; Q = zeros(S, T, Type);
 T_half = ceil(info.T/2); % first half
-Q(:,1:T_half) = Q_origin(:,T_half:-1:1);
-Q(:,(T_half+1):(T_half+info.T)) = Q_origin;
-Q(:,(T_half+info.T+1):end) = Q_origin(:,(info.T):-1:(T_half+1));
+Q(:,1:T_half) = restart.Q(:,T_half:-1:1);
+Q(:,(T_half+1):(T_half+info.T)) = restart.Q;
+Q(:,(T_half+info.T+1):end) = restart.Q(:,(info.T):-1:(T_half+1));
 
 % variables initialization
 Q_spec = fft(Q, [], 2);
 T_spec = floor(T/2 + 1);
 Q_spec = Q_spec(:, 1:T_spec); % positive half in the frequency domain
 
-phi_n = zeros(S, K, Type) + EPS; % spatial modes
-c_spec_n = zeros(T_spec, K, Type) + EPS; % time-evolution coefficients
-omega_k = zeros(K, N, Type); % central frequencies
+if (opt_restart)
+    phi_n = restart.phi_n;
+    c_spec_n = restart.c_spec_n;
+    omega_k = zeros(K, N, Type);
+    omega_k(:,1:info.Iteration.steps+1) = info.Iteration.omega;
+else
+    phi_n = zeros(S, K, Type) + EPS; % spatial modes
+    c_spec_n = zeros(T_spec, K, Type) + EPS; % time-evolution coefficients
+    omega_k = zeros(K, N, Type); % central frequencies
+end
 mode_k = zeros(S, T_spec, Type);
-
 omega = (0:(T_spec-1))/T; % frequency list
 
 % convert to GPU array
@@ -142,17 +172,23 @@ if (info.Device == 'gpu')
 end
 
 % central frequency initialization
-switch info.InitFreqType
-    case FREQRANDOM
-        omega_k(:,1) = rand(K,1) * info.InitFreqMaximum;
-    case FREQALLZERO
-        omega_k(:,1) = 0;
-    case FREQUNIFORM
-        omega_k(:,1) = (0:1/(K-1):1) * info.InitFreqMaximum;
+if (~opt_restart)
+    switch info.InitFreqType
+        case FREQRANDOM
+            omega_k(:,1) = rand(K,1) * info.InitFreqMaximum;
+        case FREQALLZERO
+            omega_k(:,1) = 0;
+        case FREQUNIFORM
+            omega_k(:,1) = (0:1/(K-1):1) * info.InitFreqMaximum;
+    end
 end
 
 %% main loop
-n = 1;
+if (opt_restart)
+    n = info.Iteration.steps+1;
+else
+    n = 1;
+end
 diff = info.Tolerance + EPS; % iteration difference initialization
 residual_k = Q_spec - phi_n * c_spec_n.'; % residual function initialization
 
@@ -208,6 +244,7 @@ if (info.Device == 'gpu')
 end
 
 % central frequencies
+info.Iteration.steps = n-1;
 info.Iteration.omega = omega_k(:,1:n);
 omega = omega_k(:,n);
 
@@ -231,5 +268,15 @@ end
 
 mode.c = c_sort;
 mode.omega = omega_sort;
+
+% restart data
+restart.S = info.S;
+restart.T = info.T;
+restart.K = info.K;
+restart.alpha = info.alpha;
+restart.weight = info.weight;
+restart.Iteration = info.Iteration;
+restart.c_spec_n = c_spec_n;
+restart.phi_n = phi_n;
 
 end
