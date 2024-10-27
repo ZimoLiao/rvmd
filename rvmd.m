@@ -123,7 +123,7 @@ end
 
 % weight vector specified ?
 opt_weight = 0;
-if (info.weight ~= 1 && length(info.weight) == S)
+if (length(info.weight) ~= 1 && length(info.weight) == S)
     opt_weight = 1;
     if (size(info.weight,1) == 1)
         info.weight = info.weight.'; % convert to column vector
@@ -197,15 +197,15 @@ while (n <= N && diff > info.Tolerance)
         residual_k = residual_k + mode_k;
 
         % update phi_k
-        phi_n(:, k) = real(conj(residual_k) * c_spec_n(:, k));
-        phi_n(:, k) = phi_n(:, k) / norm(phi_n(:, k), 'fro');
+        phi_n(:, k) = residual_k * conj(c_spec_n(:, k));
+        phi_n(:, k) = phi_n(:, k) / sqrt(sum(abs(phi_n(:, k)).^2.*info.weight));
 
         % update c_k
         if (opt_weight)
-            c_spec_n(:, k) = (residual_k.' * (phi_n(:, k).*info.weight)) ./ ...
+            c_spec_n(:, k) = (residual_k.' * (conj(phi_n(:, k)).*info.weight)) ./ ...
                 (1 + 4 * Alpha * (abs(omega) - omega_k(k, n)).^2).';
         else
-            c_spec_n(:, k) = (residual_k.' * phi_n(:, k)) ./ ...
+            c_spec_n(:, k) = (residual_k.' * conj(phi_n(:, k))) ./ ...
                 (1 + 4 * Alpha * (abs(omega) - omega_k(k, n)).^2).';
         end
 

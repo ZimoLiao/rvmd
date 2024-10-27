@@ -2,7 +2,7 @@ clear
 close all
 
 t = 1:1000;
-Q = cos(t*pi/100)+1i*cos(t*pi/50);
+Q = cos(t*pi/100)+1i*sin(t*pi/50);
 K = 2;
 Alpha = 2000;
 

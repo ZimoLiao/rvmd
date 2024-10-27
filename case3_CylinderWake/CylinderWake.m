@@ -14,7 +14,7 @@ velocity_mean = reshape(q_mean, [V,I,J]);
 
 %% parameters for RVMD
 K = 5;          	% number of modes
-alpha = 1000;       % filtering parameter
+alpha = 1000;        % filtering parameter
 tol = 5e-3;         % tolerance
 N = 500;            % maximum steps
 init = 1;           % frequency initialization (1: uniformly distributed)
@@ -42,56 +42,78 @@ end
 for k = 1:K
     figure;
     subplot(4,1,1);
-    pcolor(gridx, gridy, squeeze(phi_velocity(1,:,:,k)));
+    pcolor(gridx, gridy, real(squeeze(phi_velocity(1,:,:,k))));
     shading interp; axis equal tight;
     title('$u$','Interpreter','latex')
     subplot(4,1,2);
-    pcolor(gridx, gridy, squeeze(phi_velocity(2,:,:,k)));
+    pcolor(gridx, gridy, real(squeeze(phi_velocity(2,:,:,k))));
     shading interp; axis equal tight;
     title('$v$','Interpreter','latex')
     subplot(4,1,3);
-    pcolor(xx, yy, squeeze(phi_vorticity(:,:,k)));
+    pcolor(xx, yy, real(squeeze(phi_vorticity(:,:,k))));
     shading interp; axis equal tight;
     title('$\omega_z$','Interpreter','latex')
-    subplot(4,1,4);
-    plot(mode.c(:,k))
+    subplot(4,1,4); hold on;
+    plot(real(mode.c(:,k)))
     ylabel('$c(t)$','Interpreter','latex')
     title(['RVMD mode ',num2str(k)],'Interpreter','latex')
-    set(gcf,'Position',[200,200,500,800])
+    set(gcf,'Position',[100,200,500,800])
+end
+
+% velocity field
+for k = 1:K
+    figure;
+    subplot(4,1,1);
+    pcolor(gridx, gridy, imag(squeeze(phi_velocity(1,:,:,k))));
+    shading interp; axis equal tight;
+    title('$u$','Interpreter','latex')
+    subplot(4,1,2);
+    pcolor(gridx, gridy, imag(squeeze(phi_velocity(2,:,:,k))));
+    shading interp; axis equal tight;
+    title('$v$','Interpreter','latex')
+    subplot(4,1,3);
+    pcolor(xx, yy, imag(squeeze(phi_vorticity(:,:,k))));
+    shading interp; axis equal tight;
+    title('$\omega_z$','Interpreter','latex')
+    subplot(4,1,4); hold on;
+    plot(imag(mode.c(:,k)))
+    ylabel('$c(t)$','Interpreter','latex')
+    title(['RVMD mode ',num2str(k)],'Interpreter','latex')
+    set(gcf,'Position',[600,200,500,800])
 end
 
 %% reconstruction
-% mean flow + shift-mode
-for t = 1:T
-    shift_mode_vel_rec(:,:,:,t) = squeeze(phi_velocity(:,:,:,1))*mode.c(t,1);
-    shift_mode_vor_rec(:,:,t) = squeeze(phi_vorticity(:,:,1))*mode.c(t,1);
-end
-shift_mode_vel_rec = bsxfun(@plus, shift_mode_vel_rec, velocity_mean);
-shift_mode_vor_rec = bsxfun(@plus,shift_mode_vor_rec, vorticity_mean);
-
-% mean flow + shift-mode + intermediate vortex shedding modes
-for t = 1:T
-    inter_mode_vel_rec(:,:,:,t) = squeeze(phi_velocity(:,:,:,2))*mode.c(t,2)+ ...
-        squeeze(phi_velocity(:,:,:,3))*mode.c(t,3)+ ...
-        squeeze(phi_velocity(:,:,:,1))*mode.c(t,1);
-    inter_mode_vor_rec(:,:,t) = squeeze(phi_vorticity(:,:,2))*mode.c(t,2)+ ...
-        squeeze(phi_vorticity(:,:,3))*mode.c(t,3)+ ...
-        squeeze(phi_vorticity(:,:,1))*mode.c(t,1);
-end
-inter_mode_vel_rec = bsxfun(@plus, inter_mode_vel_rec, velocity_mean);
-inter_mode_vor_rec = bsxfun(@plus,inter_mode_vor_rec, vorticity_mean);
-
-% mean flow + shift-mode + post-transient vortex shedding modes
-for t = 1:T
-    post_mode_vel_rec(:,:,:,t) = squeeze(phi_velocity(:,:,:,4))*mode.c(t,4)+ ...
-        squeeze(phi_velocity(:,:,:,5))*mode.c(t,5)+ ...
-        squeeze(phi_velocity(:,:,:,1))*mode.c(t,1);
-    post_mode_vor_rec(:,:,t) = squeeze(phi_vorticity(:,:,4))*mode.c(t,4)+ ...
-        squeeze(phi_vorticity(:,:,5))*mode.c(t,5)+ ...
-        squeeze(phi_vorticity(:,:,1))*mode.c(t,1);
-end
-post_mode_vel_rec = bsxfun(@plus, post_mode_vel_rec, velocity_mean);
-post_mode_vor_rec = bsxfun(@plus,post_mode_vor_rec, vorticity_mean);
+% % mean flow + shift-mode
+% for t = 1:T
+%     shift_mode_vel_rec(:,:,:,t) = squeeze(phi_velocity(:,:,:,1))*mode.c(t,1);
+%     shift_mode_vor_rec(:,:,t) = squeeze(phi_vorticity(:,:,1))*mode.c(t,1);
+% end
+% shift_mode_vel_rec = bsxfun(@plus, shift_mode_vel_rec, velocity_mean);
+% shift_mode_vor_rec = bsxfun(@plus,shift_mode_vor_rec, vorticity_mean);
+% 
+% % mean flow + shift-mode + intermediate vortex shedding modes
+% for t = 1:T
+%     inter_mode_vel_rec(:,:,:,t) = squeeze(phi_velocity(:,:,:,2))*mode.c(t,2)+ ...
+%         squeeze(phi_velocity(:,:,:,3))*mode.c(t,3)+ ...
+%         squeeze(phi_velocity(:,:,:,1))*mode.c(t,1);
+%     inter_mode_vor_rec(:,:,t) = squeeze(phi_vorticity(:,:,2))*mode.c(t,2)+ ...
+%         squeeze(phi_vorticity(:,:,3))*mode.c(t,3)+ ...
+%         squeeze(phi_vorticity(:,:,1))*mode.c(t,1);
+% end
+% inter_mode_vel_rec = bsxfun(@plus, inter_mode_vel_rec, velocity_mean);
+% inter_mode_vor_rec = bsxfun(@plus,inter_mode_vor_rec, vorticity_mean);
+% 
+% % mean flow + shift-mode + post-transient vortex shedding modes
+% for t = 1:T
+%     post_mode_vel_rec(:,:,:,t) = squeeze(phi_velocity(:,:,:,4))*mode.c(t,4)+ ...
+%         squeeze(phi_velocity(:,:,:,5))*mode.c(t,5)+ ...
+%         squeeze(phi_velocity(:,:,:,1))*mode.c(t,1);
+%     post_mode_vor_rec(:,:,t) = squeeze(phi_vorticity(:,:,4))*mode.c(t,4)+ ...
+%         squeeze(phi_vorticity(:,:,5))*mode.c(t,5)+ ...
+%         squeeze(phi_vorticity(:,:,1))*mode.c(t,1);
+% end
+% post_mode_vel_rec = bsxfun(@plus, post_mode_vel_rec, velocity_mean);
+% post_mode_vor_rec = bsxfun(@plus,post_mode_vor_rec, vorticity_mean);
 
 % animation
 % figure;
