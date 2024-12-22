@@ -35,6 +35,8 @@ function [mode, info, restart] = rvmd(Q, K, Alpha, varargin)
 %       'Device' - device on which computation is performed: `cpu' or `gpu'
 %       'FPPrecision' - float-pointing precision for RVMD computation:
 %       `single' or `double'
+%       'nDC' - DC components
+%       	nDC     number of DC components
 %
 % Reference
 %   [1] Liao, Z.-M., Zhao, Z., Chen, L.-B., Wan, Z.-H., Liu, N.-S.
@@ -55,6 +57,7 @@ default_InitFreqType = FREQUNIFORM;
 default_InitFreqMaximum = FREQMAXIMUM;
 default_Device = 'cpu';
 default_FPPrecision = 'single';
+default_nDC = 0;
 
 % input parser
 p = inputParser;
@@ -69,6 +72,7 @@ addParameter(p, 'InitFreqType', default_InitFreqType);
 addParameter(p, 'InitFreqMaximum', default_InitFreqMaximum);
 addParameter(p, 'Device', default_Device);
 addParameter(p, 'FPPrecision', default_FPPrecision);
+addParameter(p, 'nDC', default_nDC);
 parse(p, Q, K, Alpha, varargin{:});
 
 % parameters
@@ -83,6 +87,7 @@ info.InitFreqType = p.Results.InitFreqType;
 info.InitFreqMaximum = min(p.Results.InitFreqMaximum, FREQMAXIMUM);
 info.Device = p.Results.Device;
 info.FPPrecision = p.Results.FPPrecision;
+info.nDC = p.Results.nDC;
 
 Type = p.Results.FPPrecision;
 N = p.Results.MaximumSteps;
@@ -92,7 +97,7 @@ opt_restart = 0;
 if (isfield(p.Results.Restart,'Q') ~= 0)
     restart = p.Results.Restart;
     opt_restart = 1;
-
+    
     info.S = restart.S;
     info.T = restart.T;
     info.K = restart.K;
@@ -100,8 +105,10 @@ if (isfield(p.Results.Restart,'Q') ~= 0)
     K = restart.K;
     Alpha = restart.alpha;
     info.weight = restart.weight;
-    info.Iteration = restart.Iteration;
-
+    info.steps = restart.steps;
+    info.omega = restart.omega;
+    info.difference = restart.difference;
+    
     Q = restart.Q;
 end
 
@@ -109,8 +116,12 @@ end
 S = info.S;
 T = info.T*2;
 
+% real input ?
+opt_real = isreal(Q);
+
 % normalize weight vector
 info.weight = info.weight/mean(info.weight);
+weight = info.weight;
 
 % single precision ?
 EPS = eps;
@@ -123,7 +134,7 @@ end
 
 % weight vector specified ?
 opt_weight = 0;
-if (length(info.weight) ~= 1 && length(info.weight) == S)
+if (numel(unique(info.weight)) ~= 1 && length(info.weight) == S)
     opt_weight = 1;
     if (size(info.weight,1) == 1)
         info.weight = info.weight.'; % convert to column vector
@@ -139,31 +150,41 @@ Q(:,(T_half+info.T+1):end) = restart.Q(:,(info.T):-1:(T_half+1));
 
 % variables initialization
 Q_spec = fft(Q, [], 2);
-T_spec = T;
-Q_spec = fftshift(Q_spec,2);
+if opt_real
+    T_spec = floor(T/2 + 1);
+    Q_spec = Q_spec(:, 1:T_spec);
+else
+    T_spec = T;
+    Q_spec = fftshift(Q_spec,2);
+end
 
 if (opt_restart)
     phi_n = restart.phi_n;
     c_spec_n = restart.c_spec_n;
     omega_k = zeros(K, N, Type);
-    omega_k(:,1:info.Iteration.steps+1) = info.Iteration.omega;
+    omega_k(:,1:info.steps+1) = info.omega;
 else
     phi_n = zeros(S, K, Type) + EPS; % spatial modes
     c_spec_n = zeros(T_spec, K, Type) + EPS; % time-evolution coefficients
     omega_k = zeros(K, N, Type); % central frequencies
 end
 mode_k = zeros(S, T_spec, Type);
-omega = (-T_spec/2:(T_spec/2-1))/T; % frequency list
+if opt_real
+    omega = (0:(T_spec-1))/T; % frequency list
+else
+    omega = (-T_spec/2:(T_spec/2-1))/T; % frequency list
+end
 
 % convert to GPU array
 if (info.Device == 'gpu')
     Q_spec = gpuArray(Q_spec);
-
+    
     phi_n = gpuArray(phi_n);
     c_spec_n = gpuArray(c_spec_n);
     omega_k = gpuArray(omega_k);
     mode_k = gpuArray(mode_k);
-
+    weight = gpuArray(info.weight);
+    
     omega = gpuArray(omega);
 end
 
@@ -181,7 +202,7 @@ end
 
 %% main loop
 if (opt_restart)
-    n = info.Iteration.steps+1;
+    n = info.steps+1;
 else
     n = 1;
 end
@@ -190,49 +211,51 @@ residual_k = Q_spec - phi_n * c_spec_n.'; % residual function initialization
 
 while (n <= N && diff > info.Tolerance)
     diff = 0;
-
+    
     for k = 1:K
         % calculate residual matrix
         mode_k = phi_n(:, k) * c_spec_n(:, k).';
         residual_k = residual_k + mode_k;
-
+        
         % update phi_k
         phi_n(:, k) = residual_k * conj(c_spec_n(:, k));
-        phi_n(:, k) = phi_n(:, k) / sqrt(sum(abs(phi_n(:, k)).^2.*info.weight));
-
-        % update c_k
-        if (opt_weight)
-            c_spec_n(:, k) = (residual_k.' * (conj(phi_n(:, k)).*info.weight)) ./ ...
-                (1 + 4 * Alpha * (abs(omega) - omega_k(k, n)).^2).';
-        else
-            c_spec_n(:, k) = (residual_k.' * conj(phi_n(:, k))) ./ ...
-                (1 + 4 * Alpha * (abs(omega) - omega_k(k, n)).^2).';
+        if opt_real
+            phi_n(:,k) = real(phi_n(:,k));
         end
-
+        phi_n(:, k) = phi_n(:, k) / sqrt(sum(abs(phi_n(:, k)).^2.*weight));
+        
+        % update c_k
+        c_spec_n(:, k) = (residual_k.' * (conj(phi_n(:, k)).*weight)) ./ ...
+            (1 + 4 * Alpha * (abs(omega) - omega_k(k, n)).^2).';
+        
         % update omega_k
-        omega_k(k, n + 1) = abs(omega) * (conj(c_spec_n(:, k)) .* c_spec_n(:, k)) ...
-            / norm(c_spec_n(:, k), 'fro')^2;
-
+        if (k<=info.nDC)
+            omega_k(k, n + 1) = 0;
+        else
+            omega_k(k, n + 1) = abs(omega) * (conj(c_spec_n(:, k)) .* c_spec_n(:, k)) ...
+                / norm(c_spec_n(:, k), 'fro')^2;
+        end
+        
         mode_k_new = phi_n(:, k) * c_spec_n(:, k).';
         residual_k = residual_k - mode_k_new;
-
+        
         % calculate iteration difference
         diff = diff + norm(mode_k_new - mode_k, 'fro') / norm(mode_k, 'fro');
     end
-
+    
     diff_iter(n) = diff;
     disp(['iteration step: ', num2str(n), '    differences: ', num2str(diff)]);
-
+    
     n = n + 1;
 end
 
 %% post-processing
-info.Iteration.difference = diff_iter;
+info.difference = gather(diff_iter);
 
 % convert to CPU array
 if (info.Device == 'gpu')
     Q_spec = gather(Q_spec);
-
+    
     phi_n = gather(phi_n);
     c_spec_n = gather(c_spec_n);
     omega_k = gather(omega_k);
@@ -240,13 +263,18 @@ if (info.Device == 'gpu')
 end
 
 % central frequencies
-info.Iteration.steps = n-1;
-info.Iteration.omega = omega_k(:,1:n);
+info.steps = n-1;
+info.omega = omega_k(:,1:n);
 omega = omega_k(:,n);
 
 % reconstruct time-evolution coefficients
 c_spec = c_spec_n;
-c = ifft(ifftshift(c_spec,1));
+if opt_real
+    c_spec((T_spec+1):T,:) = conj(c_spec_n((T_spec-1):-1:2,:));
+    c = ifft(c_spec);
+else
+    c = ifft(ifftshift(c_spec,1));
+end
 c = c((T_half+1):(T_half+info.T),:);
 
 % sort the rvmd modes according to central frequencies (from low to high)
@@ -270,7 +298,9 @@ restart.T = info.T;
 restart.K = info.K;
 restart.alpha = info.alpha;
 restart.weight = info.weight;
-restart.Iteration = info.Iteration;
+restart.difference = info.difference;
+restart.omega = info.omega;
+restart.steps = info.steps;
 restart.c_spec_n = c_spec_n;
 restart.phi_n = phi_n;
 
