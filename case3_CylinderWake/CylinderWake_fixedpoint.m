@@ -8,20 +8,17 @@ addpath '../'
 load('data_cylinder.mat');
 
 q = reshape(velocity,[S,T]);
-q_mean = mean(q,2);
-q_mean = q(:,1);
-q_fluc = bsxfun(@minus,q,q_mean); 
-velocity_mean = reshape(q_mean, [V,I,J]);
-
-save('mean_flow.mat','q_mean');
+q_base = q(:,1);
+q_fluc = bsxfun(@minus,q,q_base); 
+velocity_mean = reshape(q_base, [V,I,J]);
 
 %% parameters for RVMD
 K = 1;                  % number of modes
-alpha = 1500;            % filtering parameter
+alpha = 1000;           % filtering parameter
 tol = 5e-3;             % tolerance
 N = 500;                % maximum steps
 init = 0;               % frequency initialization (1: uniformly distributed)
-initFreqMax = 0.2;     % frequency initialization
+initFreqMax = 0.2;      % frequency initialization
 Device = 'gpu';         % device on which computation is performed
 FPPrecision = 'single'; % float-pointing precision
 nDC = 1;                % number of DC components
@@ -36,17 +33,23 @@ toc
 
 save('shift_mode.mat','mode','info');
 
+% bandwidth
+c1 = mode.c; Ec1 = trapz(c1.^2);
+dc1 = (c1(3:end)-c1(1:end-2))/2; dc1 = [c1(2)-c1(1);dc1;c1(end)-c1(end-1)];
+Bsquare = trapz(dc1.^2)/Ec1;
+alpha = (2*sqrt(2)-2)/(Bsquare*4);
+
 %% oscillating mode
 q_fluc = q_fluc - mode.phi*mode.c.';
-q_fluc = hilbert(q_fluc.').'; % TODO: analytic representation of data
+% q_fluc = hilbert(q_fluc.').'; % TODO: analytic representation of data
 
 % parameters for RVMD
-K = 2;                  % number of modes
-alpha = 1000;            % filtering parameter
+K = 4;                  % number of modes
+alpha = alpha; %1000;         	% filtering parameter
 tol = 5e-3;             % tolerance
 N = 500;                % maximum steps
 init = 1;               % frequency initialization (1: uniformly distributed)
-initFreqMax = 0.1;     % frequency initialization
+initFreqMax = 0.05;      % frequency initialization
 Device = 'gpu';         % device on which computation is performed
 FPPrecision = 'single'; % float-pointing precision
 nDC = 0;                % number of DC components
@@ -58,7 +61,7 @@ tic
     'FPPrecision', FPPrecision, 'nDC', nDC);
 toc
 
-save('votex_shedding_mode.mat','mode','info');
+save('vortex_shedding_mode.mat','mode','info');
 
 
 

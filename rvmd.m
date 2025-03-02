@@ -196,7 +196,7 @@ if (~opt_restart)
         case FREQALLZERO
             omega_k(:,1) = 0;
         case FREQUNIFORM
-            omega_k(:,1) = (0:1/(K-1):1) * info.InitFreqMaximum;
+            omega_k(:,1) = (1:K)/K * info.InitFreqMaximum;
     end
 end
 

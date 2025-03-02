@@ -14,7 +14,7 @@ velocity_mean = reshape(q_mean, [V,I,J]);
 
 %% parameters for RVMD
 K = 5;          	% number of modes
-alpha = 1000;        % filtering parameter
+alpha = 10000;        % filtering parameter
 tol = 5e-3;         % tolerance
 N = 500;            % maximum steps
 init = 1;           % frequency initialization (1: uniformly distributed)

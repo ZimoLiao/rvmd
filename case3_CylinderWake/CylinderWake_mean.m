@@ -16,11 +16,11 @@ save('mean_flow.mat','q_mean');
 
 %% parameters for RVMD
 K = 1;                  % number of modes
-alpha = 1500;            % filtering parameter
+alpha = 1500;           % filtering parameter
 tol = 5e-3;             % tolerance
 N = 500;                % maximum steps
 init = 0;               % frequency initialization (1: uniformly distributed)
-initFreqMax = 0.2;     % frequency initialization
+initFreqMax = 0.2;      % frequency initialization
 Device = 'gpu';         % device on which computation is performed
 FPPrecision = 'single'; % float-pointing precision
 nDC = 1;                % number of DC components
@@ -41,11 +41,11 @@ q_fluc = hilbert(q_fluc.').'; % TODO: analytic representation of data
 
 % parameters for RVMD
 K = 2;                  % number of modes
-alpha = 1000;            % filtering parameter
+alpha = 1000;       	% filtering parameter
 tol = 5e-3;             % tolerance
 N = 500;                % maximum steps
 init = 1;               % frequency initialization (1: uniformly distributed)
-initFreqMax = 0.1;     % frequency initialization
+initFreqMax = 0.1;      % frequency initialization
 Device = 'gpu';         % device on which computation is performed
 FPPrecision = 'single'; % float-pointing precision
 nDC = 0;                % number of DC components
@@ -57,7 +57,7 @@ tic
     'FPPrecision', FPPrecision, 'nDC', nDC);
 toc
 
-save('votex_shedding_mode.mat','mode','info');
+save('vortex_shedding_mode.mat','mode','info');
 
 
 

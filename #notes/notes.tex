@@ -1,0 +1,146 @@
+\documentclass[12pt]{article}
+
+\usepackage{bm,amsmath,amssymb,geometry}
+\geometry{scale=0.8}
+\numberwithin{equation}{section}
+
+\begin{document}
+
+\section{Problem formulation}
+
+\paragraph{Low-order representation}
+A low-order representation of spatiotemporal data $q(\bm{x},t)$ can be written as
+\begin{equation}
+	q(\bm{x},t)\simeq \sum_{k=1}^{K}\phi_k(\bm{x})c_k(t),
+\end{equation}
+where $\phi_k$ is the (spatial) mode and $c_k$ is the temporal coefficient.
+The data $q(\bm{x},t)$ can be either real- or complex-valued.
+
+\paragraph{RVMD modes}
+RVMD seeks a group of triplets with a finite number $K$
+\begin{equation}
+	\left.\left\{\phi_k(\bm{x}),c_k(t),\omega_k\right\}\right|_{k=1}^K
+\end{equation}
+that constitutes an approximation of the observed data.
+We define the inner products and the induced norms as below
+\begin{equation}
+	\left\|\phi(\bm{x})\right\|_{\bm{x},W}\equiv \langle\phi,\phi\rangle_{\bm{x},W}^{1/2},\quad \langle\phi_1,\phi_2\rangle_{\bm{x},W}\equiv\int_\Omega \phi_1(\bm{x}) \overline{\phi_2}(\bm{x}) W(\bm{x})\,\mathrm{d}\bm{x}
+\end{equation}
+\begin{equation}
+	\left\|c(t)\right\|_{t}\equiv \langle c, c\rangle_{t}^{1/2},\quad \langle c_1, c_2\rangle_{t}\equiv\int_\Omega  c_1(\bm{x}) \overline{ c_2}(\bm{x})\,\mathrm{d}\bm{x}
+\end{equation}
+where $W(\bm{x})$ is the weight function defined on spatial domain.
+Domains of $\phi(\bm{x})$, $c_k(t)$, and $\omega_k$ are 
+\begin{equation}
+	\Phi=\left\{\phi(\bm{x})\in L^{2,\mathbb{C}}\big|\,\|\phi(\bm{x})\|_{\bm{x},W}=1\right\};\quad
+	C=L_{loc}^{2,\mathbb{C}}(-\infty,\infty);\quad
+	\mathbb{R}^+,
+\end{equation}
+respectively.
+
+\paragraph{The RVMD optimization problem}
+
+The optimization can be formulated in the frequency domain
+\begin{eqnarray}
+	\min_{\left.\left\{\phi_k(\boldsymbol{x}),\hat{c}_k(\omega),\omega_k\right\}\right|_{k=1}^K}&&
+	\Bigg\{
+	\sum_{k=1}^K \alpha\int_{-\infty}^\infty \left(|\omega|-\omega_k\right)^2 \left|\hat{c}_k(\omega)\right|^2\,\mathrm{d}\omega \notag\\
+	&&\quad+\int_\Omega\int_{-\infty}^\infty \bigg|\hat{q}(\boldsymbol{x},\omega)-\sum_{k=1}^K\phi_k(\boldsymbol{x})\hat{c}_k(\omega)\bigg|^2 W(\bm{x})\,\mathrm{d}\omega\mathrm{d}\boldsymbol{x}
+	\Bigg\}.
+\end{eqnarray}
+Here $\hat{c}_k(\omega)\equiv\mathcal{F}\{c_k(t)\}\in\hat{C}\equiv L_{loc}^{2,\mathbb{C}}(-\infty,\infty)$.
+
+\section{Computation}
+
+Using block coordinate descent algorithm to compute RVMD modes, the original joint problem is then decomposed into a sequence of iterative sub-optimizations
+\begin{eqnarray}
+	\phi_k^{n+1}&=&\underset{\phi_k\in\Phi}{\operatorname{argmin}}\left\{F_{\phi_k}^{n+1}(\phi_k)\right\}, \\
+	\hat{c}_k^{n+1}&=&\underset{\hat{c}_k\in \hat{C}}{\operatorname{argmin}}\left\{F_{\hat{c}_k}^{n+1}(\hat{c}_k)\right\}, \\
+	\omega_k^{n+1}&=&\underset{\omega_k\in\mathbb{R}^+}{\operatorname{argmin}}\left\{F_{\omega_k}^{n+1}(\omega_k)\right\},
+	\label{eqn:update}
+\end{eqnarray}
+
+Here we define a residual function for the $k$th mode at iteration step $n$
+\begin{equation}
+	\hat{r}_k^n(\bm{x},\omega)\equiv\hat{q}(\bm{x},\omega)
+	-\sum_{k=1}^{k-1}\phi^{n+1}_k(\boldsymbol{x})\hat{c}^{n+1}_k(\omega)
+	-\sum_{k=k+1}^K\phi^{n}_k(\boldsymbol{x})\hat{c}^{n}_k(\omega)
+\end{equation}
+
+\paragraph{Sub-optimization w.r.t. $\phi_k(x)$}
+
+\begin{equation}
+	\phi_k^{n+1}(\boldsymbol{x})=\arg\min	\Bigg\{\int_\Omega\int_{-\infty}^\infty \bigg|\hat{r}_k^n(\boldsymbol{x},\omega)-\phi_k(\boldsymbol{x})\hat{c}_k^n(\omega)\bigg|^2 W(\bm{x})\,\mathrm{d}\omega\mathrm{d}\boldsymbol{x}
+	\Bigg\}.
+\end{equation}
+
+Let the functional derivative vanish for all variations
+\begin{equation}
+	\frac{\mathrm{d}}{\mathrm{d}\delta} \Bigg[\int_\Omega\int_{-\infty}^\infty \bigg|\hat{r}_k^n(\boldsymbol{x},\omega)-\phi_k(\boldsymbol{x})\hat{c}_k^n(\omega)\bigg|^2 W(\bm{x})\,\mathrm{d}\omega\mathrm{d}\boldsymbol{x}\Bigg]\Bigg|_{\delta=0}=0,\quad \forall\psi(\bm{x})\in \Phi,\,\delta\in\mathbb{R}
+\end{equation}
+
+then we have
+\begin{align}
+	0=&\,\int_\Omega\int_{-\infty}^\infty \psi(\bm{x})\hat{c}_k^n(\omega)\overline{\left[\hat{r}_k^n(\boldsymbol{x},\omega)-\phi_k(\boldsymbol{x})\hat{c}_k^n(\omega)\right]} W(\bm{x})\,\mathrm{d}\omega\mathrm{d}\boldsymbol{x} \\
+	=&\,\int_{-\infty}^\infty \hat{c}_k^n(\omega)\overline{\left[\hat{r}_k^n(\boldsymbol{x},\omega)-\phi_k(\boldsymbol{x})\hat{c}_k^n(\omega)\right]} \,\mathrm{d}\omega
+\end{align}
+
+\begin{equation}
+	\Rightarrow\int_{-\infty}^\infty \hat{c}_k^n(\omega)\overline{\hat{r}_k^n(\boldsymbol{x},\omega)} \,\mathrm{d}\omega=\overline{\phi_k(\boldsymbol{x})}\int_{-\infty}^\infty \left|\hat{c}_k^n(\omega)\right|^2 \,\mathrm{d}\omega
+\end{equation}
+
+\begin{equation}
+	\Rightarrow
+	\phi_k(\boldsymbol{x})=
+	\frac{\int_{-\infty}^\infty \overline{\hat{c}_k^n(\omega)}{\hat{r}_k^n(\boldsymbol{x},\omega)} \,\mathrm{d}\omega}{\int_{-\infty}^\infty \left|\hat{c}_k^n(\omega)\right|^2 \,\mathrm{d}\omega}
+\end{equation}
+
+with normalization condition enforced, we have
+
+\begin{equation}
+	\phi_k^{n+1}(\boldsymbol{x})=
+	\frac{\int_{-\infty}^\infty \overline{\hat{c}_k^n(\omega)}{\hat{r}_k^n(\boldsymbol{x},\omega)} \,\mathrm{d}\omega}{\left\|\int_{-\infty}^\infty \overline{\hat{c}_k^n(\omega)}{\hat{r}_k^n(\boldsymbol{x},\omega)} \,\mathrm{d}\omega\right\|_{\bm{x},W}}
+\end{equation}
+
+\paragraph{Sub-optimization w.r.t. $\hat{c}_k(\omega)$}
+
+\begin{equation}
+	\hat{c}_k^{n+1}(\omega)=\arg\min	\Bigg\{
+		\alpha\int_{-\infty}^\infty \left(|\omega|-\omega^n_k\right)^2 \left|\hat{c}_k(\omega)\right|^2\,\mathrm{d}\omega
+		+\int_\Omega\int_{-\infty}^\infty \bigg|\hat{r}_k^n(\boldsymbol{x},\omega)-\phi^{n+1}_k(\boldsymbol{x})\hat{c}_k(\omega)\bigg|^2 W(\bm{x})\,\mathrm{d}\omega\mathrm{d}\boldsymbol{x}
+	\Bigg\}.
+\end{equation}
+
+\begin{align}
+	0=&\,
+	\alpha\int_{-\infty}^\infty \left(|\omega|-\omega^n_k\right)^2 \overline{\hat{c}_k(\omega)}\eta(\omega)\,\mathrm{d}\omega	\notag\\
+		&\,+\int_\Omega\int_{-\infty}^\infty \left[-\phi^{n+1}_k(\boldsymbol{x})\eta(\omega)\right]\overline{\left[\hat{r}_k^n(\boldsymbol{x},\omega)-\phi^{n+1}_k(\boldsymbol{x})\hat{c}_k(\omega)\right]} W(\bm{x})\,\mathrm{d}\omega\mathrm{d}\boldsymbol{x}
+\end{align}
+
+\begin{align}
+	0=&\,
+	\alpha \left(|\omega|-\omega^n_k\right)^2 \overline{\hat{c}_k(\omega)}
+		-\int_\Omega \phi^{n+1}_k(\boldsymbol{x})\overline{\left[\hat{r}_k^n(\boldsymbol{x},\omega)-\phi^{n+1}_k(\boldsymbol{x})\hat{c}_k(\omega)\right]} W(\bm{x})\,\mathrm{d}\boldsymbol{x}
+\end{align}
+
+\begin{equation}
+	\Rightarrow \hat{c}_k^{n+1}(\omega)=
+	\frac{\int_\Omega \overline{\phi^{n+1}_k(\boldsymbol{x})} {\hat{r}_k^n(\boldsymbol{x},\omega)} W(\bm{x})\,\mathrm{d}\boldsymbol{x}}{1+\alpha \left(|\omega|-\omega^n_k\right)^2}
+\end{equation}
+
+\paragraph{Sub-optimization w.r.t. $\omega_k$}
+
+\begin{equation}
+	\omega_k^{n+1}=\frac{\int_{-\infty}^\infty |\omega||{\hat{c}_k^{n+1}(\omega)}|^2 \,\mathrm{d}\omega}{\int_{-\infty}^\infty |{\hat{c}_k^n(\omega)}|^2\,\mathrm{d}\omega}
+\end{equation}
+
+% weight function:
+% \begin{equation}
+%   W(\bm{x})
+% \end{equation}
+% weighted norm:
+% \begin{equation}
+%   \left\|A(\bm{x})\right\|_W^2\equiv \int_\Omega |A(\bm{x})|W(\bm{x})\,\mathrm{d}\bm{x}
+% \end{equation} % TODO: 不完全需要  本来就内含了这个体积加权  当然如果是考虑不同物理量那还是加上吧
+
+\end{document}
