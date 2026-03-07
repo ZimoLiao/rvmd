@@ -125,7 +125,7 @@ end
 
 % weight vector specified ?
 opt_weight = 0;
-if (info.weight ~= 1 && length(info.weight) == S)
+if (numel(unique(info.weight)) ~= 1 && length(info.weight) == S)
     opt_weight = 1;
     if (size(info.weight,1) == 1)
         info.weight = info.weight.'; % convert to column vector
