@@ -32,6 +32,19 @@
                 "purpose": "filtering parameter"
             },
             {
+                "name": "Restart",
+                "kind": "namevalue",
+                "purpose": "restart data from previous computation"
+            },
+            {
+                "name": "Weight",
+                "kind": "namevalue",
+                "type": [
+                    "numeric"
+                ],
+                "purpose": "weight vector for spatial weighting"
+            },
+            {
                 "name": "Tolerance",
                 "kind": "namevalue",
                 "purpose": "tolerance for iteration"
