@@ -12,6 +12,7 @@ testRestart;
 testWeightedSingleRestart;
 testNameValueRestartDefaults;
 testLegacyRestart;
+testLegacyComplexSingleSnapshot;
 testRealFrequencies;
 testComplexFrequencies;
 testSinglePrecisionDC;
@@ -176,6 +177,20 @@ legacy = rmfield(legacy, {'version', 'Tolerance', 'MaximumSteps', ...
 assert(norm(modeLegacy.phi - modeFull.phi, 'fro') < 1e-12);
 assert(norm(modeLegacy.c - modeFull.c, 'fro') < 1e-12);
 assert(norm(modeLegacy.omega - modeFull.omega) < 1e-12);
+end
+
+function testLegacyComplexSingleSnapshot
+q = [1 + 2i; -0.3 + 0.7i];
+[modeFull, ~] = rvmd(q, 1, 0, ...
+    'MaximumSteps', 3, 'Tolerance', 0, 'FPPrecision', 'double');
+[~, ~, state] = rvmd(q, 1, 0, ...
+    'MaximumSteps', 1, 'Tolerance', 0, 'FPPrecision', 'double');
+legacy = rmfield(state, {'version', 'residual_n', 'isRealInput'});
+[modeLegacy, ~] = rvmd('Restart', legacy, ...
+    'MaximumSteps', 3, 'Tolerance', 0);
+assert(~isreal(modeLegacy.phi));
+assert(norm(modeLegacy.phi - modeFull.phi, 'fro') < 1e-12);
+assert(norm(modeLegacy.c - modeFull.c, 'fro') < 1e-12);
 end
 
 function testRealFrequencies

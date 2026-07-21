@@ -488,7 +488,7 @@ else
         {'single', 'double'}, 'rvmd:InvalidRestart', 'FPPrecision');
 end
 if ~isfield(state, 'isRealInput')
-    state.isRealInput = size(state.c_spec_n, 1) == state.T + 1;
+    state.isRealInput = isreal(state.Q);
 end
 if ~isfield(state, 'nDC')
     state.nDC = 0;

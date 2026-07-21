@@ -182,6 +182,22 @@ verifyEqual(testCase, modeLegacy.c, modeFull.c, 'AbsTol', 1e-12);
 verifyEqual(testCase, modeLegacy.omega, modeFull.omega, 'AbsTol', 1e-12);
 end
 
+function testLegacyComplexSingleSnapshotKeepsComplexBranch(testCase)
+q = [1 + 2i; -0.3 + 0.7i];
+[modeFull, ~] = rvmd(q, 1, 0, ...
+    'MaximumSteps', 3, 'Tolerance', 0, 'FPPrecision', 'double');
+[~, ~, state] = rvmd(q, 1, 0, ...
+    'MaximumSteps', 1, 'Tolerance', 0, 'FPPrecision', 'double');
+
+legacy = rmfield(state, {'version', 'residual_n', 'isRealInput'});
+[modeLegacy, ~] = rvmd('Restart', legacy, ...
+    'MaximumSteps', 3, 'Tolerance', 0);
+
+verifyFalse(testCase, isreal(modeLegacy.phi));
+verifyEqual(testCase, modeLegacy.phi, modeFull.phi, 'AbsTol', 1e-12);
+verifyEqual(testCase, modeLegacy.c, modeFull.c, 'AbsTol', 1e-12);
+end
+
 function testRealTwoToneFrequencies(testCase)
 T = 128;
 n = 0:(T - 1);
