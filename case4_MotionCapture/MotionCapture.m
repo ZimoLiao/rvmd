@@ -70,7 +70,7 @@ ylabel('Spatially averaged spectrum')
 
 %% RVMD mode: energy_k - omega_k
 figure;
-stem(mode.omega,mode.energy.^2);
+stem(mode.omega,mode.energy);
 set(gca,'XScale','log','YScale','log');
 xlim([-inf,0.5])
 ylim([1e2,1e11])

@@ -1,79 +1,84 @@
 {
-    "_schemaVersion": "1.0.0",
-    "rvmd": {
-        "inputs": [
-            {
-                "name": "Q",
-                "kind": "required",
-                "type": [
-                    "numeric"
-                ],
-                "purpose": "data matrix"
-            },
-            {
-                "name": "K",
-                "kind": "required",
-                "type": [
-                    "numeric",
-                    "integer",
-                    "scalar",
-                    ">0"
-                ],
-                "purpose": "number of modes"
-            },
-            {
-                "name": "alpha",
-                "kind": "required",
-                "type": [
-                    "numeric",
-                    "scalar",
-                    ">0"
-                ],
-                "purpose": "filtering parameter"
-            },
-            {
-                "name": "Restart",
-                "kind": "namevalue",
-                "purpose": "restart data from previous computation"
-            },
-            {
-                "name": "Weight",
-                "kind": "namevalue",
-                "type": [
-                    "numeric"
-                ],
-                "purpose": "weight vector for spatial weighting"
-            },
-            {
-                "name": "Tolerance",
-                "kind": "namevalue",
-                "purpose": "tolerance for iteration"
-            },
-            {
-                "name": "MaximumSteps",
-                "kind": "namevalue",
-                "purpose": "maximum number of iteration step"
-            },
-            {
-                "name": "InitFreqType",
-                "kind": "namevalue",
-                "type": "choices={-1,0,1}",
-                "purpose": "frequency initialization type"
-            },
-            {
-                "name": "InitFreqMaximum",
-                "kind": "namevalue"
-            },
-            {
-                "name": "Device",
-                "type": "choices={'gpu','cpu'}",
-                "kind": "namevalue"
-            },
-            {
-                "name": "FPPrecision",
-                "type": "choices={'single','double'}",
-                "kind": "namevalue"
-            }
-        ]
-    }
+  "_schemaVersion": "1.0.0",
+  "rvmd": {
+    "inputs": [
+      {
+        "name": "Q",
+        "kind": "required",
+        "type": ["numeric"],
+        "purpose": "finite real- or complex-valued S-by-T data matrix"
+      },
+      {
+        "name": "K",
+        "kind": "required",
+        "type": ["numeric", "integer", "scalar", ">0"],
+        "purpose": "number of modes"
+      },
+      {
+        "name": "Alpha",
+        "kind": "required",
+        "type": ["numeric", "scalar", ">=0"],
+        "purpose": "bandwidth penalty in 1/(1+2*Alpha*d^2)"
+      },
+      {
+        "name": "Restart",
+        "kind": "namevalue",
+        "purpose": "restart state returned by rvmd"
+      },
+      {
+        "name": "Weight",
+        "kind": "namevalue",
+        "type": ["numeric"],
+        "purpose": "positive scalar or spatial weight vector"
+      },
+      {
+        "name": "Tolerance",
+        "kind": "namevalue",
+        "type": ["numeric", "scalar", ">=0"],
+        "purpose": "iteration stopping tolerance"
+      },
+      {
+        "name": "MaximumSteps",
+        "kind": "namevalue",
+        "type": ["numeric", "integer", "scalar", ">0"],
+        "purpose": "total iteration cap, including saved restart steps"
+      },
+      {
+        "name": "InitFreqType",
+        "kind": "namevalue",
+        "type": "choices={-1,0,1}",
+        "purpose": "random, zero, or uniform frequency initialization"
+      },
+      {
+        "name": "InitFreqMaximum",
+        "kind": "namevalue",
+        "type": ["numeric", "scalar", ">=0"],
+        "purpose": "initial frequency upper bound, capped at 0.5"
+      },
+      {
+        "name": "Device",
+        "kind": "namevalue",
+        "type": "choices={'cpu','gpu'}",
+        "purpose": "computation device"
+      },
+      {
+        "name": "FPPrecision",
+        "kind": "namevalue",
+        "type": "choices={'single','double'}",
+        "purpose": "floating-point precision"
+      },
+      {
+        "name": "nDC",
+        "kind": "namevalue",
+        "type": ["numeric", "integer", "scalar", ">=0"],
+        "purpose": "number of leading modes fixed at zero frequency"
+      },
+      {
+        "name": "Display",
+        "kind": "namevalue",
+        "type": "choices={'off','iter'}",
+        "purpose": "iteration display mode"
+      }
+    ]
+  }
 }

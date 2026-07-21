@@ -43,7 +43,7 @@ N = 500;                % maximum steps
 init = 0;               % frequency initialization (1: uniformly distributed)
 initFreqMax = 0.2;      % frequency initialization
 Device = 'gpu';         % device on which computation is performed
-FPPrecision = 'single'; % float-pointing precision
+FPPrecision = 'single'; % floating-point precision
 nDC = 1;                % number of DC components
 
 % computation
@@ -101,7 +101,7 @@ N = 500;                % maximum steps
 init = 1;               % frequency initialization (1: uniformly distributed)
 initFreqMax = 0.05;     % frequency initialization
 Device = 'gpu';         % device on which computation is performed
-FPPrecision = 'single'; % float-pointing precision
+FPPrecision = 'single'; % floating-point precision
 nDC = 0;                % number of DC components
 
 tic

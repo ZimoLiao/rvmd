@@ -1,393 +1,271 @@
 # Reduced-order Variational Mode Decomposition (RVMD)
 
-[English](#english) | [中文](#中文)
+[English](#english) · [中文](#中文)
 
----
+## English
 
-<a name="english"></a>
-
-## Overview
-
-**RVMD** is a MATLAB implementation of Reduced-order Variational Mode Decomposition, a method that combines variational mode decomposition (VMD) with low-order modal representation. RVMD can adaptively extract **low-order dynamics featured by transient or non-stationary properties** from space-time data.
-
-Unlike standard VMD which operates on 1D signals, RVMD decomposes a space-time data matrix **Q** (size S × T) into a set of modes, each consisting of a spatial mode **φ**, a time-evolution coefficient **c(t)**, and a characteristic central frequency **ω**.
-
-## Installation
-
-1. Clone or download this repository.
-2. Add the repository root to your MATLAB path:
-   ```matlab
-   addpath('/path/to/rvmd')
-   ```
-
-No additional toolboxes are required for CPU computation. GPU computation requires the Parallel Computing Toolbox.
-
-## Quick Start
+`rvmd.m` is the single MATLAB implementation in this repository for both
+real- and complex-valued reduced-order variational mode decomposition.
+Given an `S × T` space-time matrix `Q`, it returns spatial modes `phi`,
+time-evolution coefficients `c`, and nonnegative center frequencies
+`omega` such that
 
 ```matlab
-% Q: data matrix of size [S, T] (S = spatial points, T = time steps)
-% K: number of modes to extract
-% Alpha: filtering parameter (bandwidth control)
-
-[mode, info] = rvmd(Q, K, Alpha);
-
-% Access results
-mode.phi    % spatial modes    [S x K]
-mode.c      % time-evolution coefficients [T x K]
-mode.omega  % central frequencies [K x 1]
-mode.energy % mode energy [1 x K]
-
-% Reconstruct the data
-Q_rec = mode.phi * mode.c.';
+Q_reconstructed = mode.phi * mode.c.';
 ```
 
-## API Reference
+The transpose is intentionally nonconjugating (`.'`).
+
+### Installation
+
+Add the repository root to the MATLAB path:
+
+```matlab
+addpath('/path/to/rvmd')
+```
+
+CPU computation needs no optional MATLAB toolbox. GPU computation requires
+Parallel Computing Toolbox.
+
+### Quick start
+
+Real input automatically uses real spatial modes and a nonnegative
+half-spectrum:
+
+```matlab
+[mode, info] = rvmd(Qreal, 4, 1000, ...
+    'FPPrecision', 'double', 'Tolerance', 1e-6);
+```
+
+Complex input automatically uses complex modes and the complete shifted
+spectrum:
+
+```matlab
+[mode, info] = rvmd(Qcomplex, 4, 1000, ...
+    'FPPrecision', 'double', 'Tolerance', 1e-6);
+```
+
+For complex data, the bandwidth distance is `abs(f) - omega(k)`. Each
+reported center is therefore a frequency magnitude in `[0, 0.5]`, not a
+signed frequency.
+
+### API
 
 ```matlab
 [mode, info] = rvmd(Q, K, Alpha)
-[mode, info] = rvmd(Q, K, Alpha, Name, Value)
-[mode, info, restart] = rvmd(Q, K, Alpha, ...)
-[mode, info, restart] = rvmd('Restart', restart_data, ...)
+[mode, info, restart] = rvmd(Q, K, Alpha, Name, Value, ...)
+[mode, info, restart] = rvmd('Restart', restart, Name, Value, ...)
 ```
 
-### Required Arguments
+Required inputs:
 
-| Argument | Type | Description |
-|----------|------|-------------|
-| `Q` | matrix [S × T] | Input data matrix. Rows are spatial points, columns are time steps. |
-| `K` | positive integer | Number of modes to extract. |
-| `Alpha` | positive scalar | Filtering parameter controlling mode bandwidth. Larger values produce narrower bandwidth (more frequency-selective). |
+| Input | Contract |
+|---|---|
+| `Q` | Finite, nonempty numeric matrix, `S × T`; may be real or complex. |
+| `K` | Positive integer number of modes. |
+| `Alpha` | Nonnegative scalar bandwidth penalty. |
 
-### Optional Name-Value Parameters
+Options:
 
-| Name | Default | Description |
-|------|---------|-------------|
-| `'Tolerance'` | `5e-3` | Convergence tolerance for stopping criterion. |
-| `'MaximumSteps'` | `500` | Maximum number of iteration steps. |
-| `'InitFreqType'` | `1` | Central frequency initialization strategy: `-1` = random, `0` = all zero, `1` = uniformly distributed. |
-| `'InitFreqMaximum'` | `0.5` | Upper bound for initial central frequencies (capped at 0.5, the Nyquist frequency). |
-| `'Device'` | `'cpu'` | Computation device: `'cpu'` or `'gpu'`. |
-| `'FPPrecision'` | `'single'` | Floating-point precision: `'single'` or `'double'`. |
-| `'Weight'` | `1` | Weight vector of length S for spatially weighted RVMD. Default is uniform weighting. |
-| `'Restart'` | `0` | Restart struct from a previous call for continuing computation. |
+| Name | Default | Contract |
+|---|---:|---|
+| `'Weight'` | `1` | Positive scalar or vector of length `S`. It is reshaped to a column and normalized by its mean. |
+| `'Tolerance'` | `5e-3` | Nonnegative stopping tolerance for the sum of relative spectral-mode changes. |
+| `'MaximumSteps'` | `500` | Positive total iteration cap. On restart this is not an additional-step count. |
+| `'InitFreqType'` | `1` | `-1` random, `0` all zero, `1` uniformly distributed. |
+| `'InitFreqMaximum'` | `0.5` | Upper initialization frequency, capped at Nyquist `0.5`. |
+| `'Device'` | `'cpu'` | `'cpu'` or `'gpu'`. |
+| `'FPPrecision'` | `'single'` | `'single'` or `'double'`. |
+| `'nDC'` | `0` | Number of leading internal modes whose center remains fixed at zero; must not exceed `K`. |
+| `'Display'` | `'off'` | `'off'` or `'iter'`. |
+| `'Restart'` | `0` | State returned by a previous call; the restart-only form above is preferred. |
 
-### Outputs
+Outputs:
 
-| Output | Description |
-|--------|-------------|
-| `mode.phi` | Spatial modes [S × K], each column is a unit-norm spatial mode. |
-| `mode.c` | Time-evolution coefficients [T × K]. |
-| `mode.omega` | Central frequencies [K × 1], sorted from low to high. |
-| `mode.energy` | Mode energy [1 × K], defined as ‖c_k‖². |
-| `info` | Struct containing parameter settings and iteration history (`info.Iteration.difference`, `info.Iteration.omega`, `info.Iteration.steps`). |
-| `restart` | (Optional) Struct storing internal state for resuming computation later. |
+| Field | Meaning |
+|---|---|
+| `mode.phi` | `S × K` weighted-unit-norm spatial modes. |
+| `mode.c` | `T × K` time coefficients. |
+| `mode.omega` | `K × 1` final center frequencies, sorted low to high. |
+| `mode.energy` | `1 × K`, `sum(abs(mode.c).^2,1)`. |
+| `info.Iteration.steps` | Number of completed Gauss--Seidel sweeps. |
+| `info.Iteration.omega` | Unsorted internal center-frequency history, including initialization. |
+| `info.Iteration.difference` | Convergence metric after each completed sweep. |
+| `info.Iteration.converged` | Whether the final metric satisfies `Tolerance`. |
+| `restart` | Unsorted internal state used to continue the identical trajectory. |
 
-### Restart Example
+### The exact filter convention
 
-For large or difficult problems, you can split the computation into stages:
+Both code paths implement
 
-```matlab
-% Run for 200 steps first
-[~, ~, restart] = rvmd(Q, K, Alpha, 'MaximumSteps', 200);
-
-% Continue for 8000 more steps from where we left off
-[mode, info, ~] = rvmd('Restart', restart, 'MaximumSteps', 8000);
+```text
+g(f) = 1 / (1 + 2*Alpha*(distance from center)^2)
 ```
 
-### Weighted RVMD Example
+where the distance is `f - omega(k)` for the real nonnegative spectrum and
+`abs(f) - omega(k)` for the complex full spectrum. The half-power bandwidth
+between the two cutoff points is
 
-Apply spatial weighting to emphasize specific regions:
+```text
+bandwidth = sqrt((2*sqrt(2) - 2) / Alpha).
+```
+
+This factor of `2` is part of the published RVMD definition. See
+[the derivation and validation contract](docs/theory-and-validation.md).
+
+### Weighted RVMD
 
 ```matlab
-w = ones(S, 1);
-w(region_of_interest) = 10;  % higher weight for important regions
+w = cellVolume(:);                 % positive, length S
 [mode, info] = rvmd(Q, K, Alpha, 'Weight', w);
+
+% Every column is normalized in the implemented inner product:
+wNormalized = w / mean(w);
+sqrt(sum(abs(mode.phi).^2 .* wNormalized, 1))
 ```
 
-## Parameter Tuning Guide
+### Restart
 
-| Parameter | Effect | Guidance |
-|-----------|--------|----------|
-| **K** (number of modes) | Determines how many components are extracted. | Start small and increase. Too few modes miss dynamics; too many may produce spurious modes. |
-| **Alpha** (filtering parameter) | Controls mode bandwidth. Larger Alpha → narrower bandwidth. | Typical range: 500–5000. Use larger values for data with well-separated frequencies. |
-| **Tolerance** | Convergence threshold. | Use `1e-3` to `1e-5` for most cases. Tighter tolerance gives more accurate results but requires more iterations. |
-| **InitFreqMaximum** | Constrains the initial frequency search range. | Set to slightly above the highest frequency of interest (normalized, max 0.5). |
-
-## Examples
-
-### Case 1: 1D Non-stationary Signal
-
-RVMD reduces to VMD for 1D signals. This example decomposes a composite signal with three frequency components and noise.
+`MaximumSteps` always means a total cap:
 
 ```matlab
-cd case1_NonstationarySignal
-NonstationarySignal
+[~, ~, state] = rvmd(Q, K, Alpha, 'MaximumSteps', 200);
+[mode, info] = rvmd('Restart', state, 'MaximumSteps', 1000);
 ```
 
-### Case 2: Lorenz Attractor
+The second call continues steps 201 through at most 1000. Immutable problem
+settings (data, `K`, `Alpha`, weights, precision, real/complex branch,
+initialization, and `nDC`) come from `state`.
 
-Demonstrates RVMD on chaotic Lorenz system data (3D state space), with restart functionality for long iterative computations.
+### Canonicalization and non-uniqueness
+
+The implementation removes amplitude ambiguity with weighted unit norm. It
+removes the remaining per-mode phase/sign ambiguity by making the largest
+entry of each spatial mode real and positive, then sorts outputs by center
+frequency.
+
+RVMD is nevertheless a non-convex optimization. Different initializations
+or degenerate modes may converge to different stationary decompositions.
+The repository provides one canonical implementation and representation;
+it does not claim a globally unique optimizer.
+
+### Examples and tests
+
+The four `case*` directories cover a non-stationary signal, the Lorenz
+attractor, a transient cylinder wake, and motion-capture data. The
+`tutorial_CylinderWake` directory contains additional flow-analysis tools.
+
+Run the MATLAB regression suite from the repository root:
 
 ```matlab
-cd case2_LorenzAttractor
-LorenzAttractor
+results = runtests('tests/test_rvmd.m');
+assertSuccess(results)
 ```
 
-### Case 3: Transient Cylinder Wake
+GNU Octave users can run the executable compatibility suite with:
 
-Applies RVMD to 2D velocity field data of a transient cylinder wake flow, extracting shift modes and vortex shedding modes at different stages. Supports GPU acceleration.
+```bash
+octave-cli --no-gui --quiet --eval "addpath('tests'); run_octave_tests;"
+```
+
+The suite checks the filter coefficient, real and complex synthetic
+frequencies, conjugation/phase convention, weighted normalization, zero
+data, input validation, and restart equivalence.
+
+## 中文
+
+本仓库只保留一个实现文件 `rvmd.m`，同时正确处理实值与复值时空数据。
+输入 `Q` 的尺寸为 `S × T`（空间点 × 时间快照），重构方式为：
 
 ```matlab
-cd case3_CylinderWake
-CylinderWake
+Q_rec = mode.phi * mode.c.';  % 注意这里是非共轭转置 .'
 ```
 
-### Case 4: Motion Capture
+### 实值与复值分支
 
-Decomposes human motion capture data into frequency-based components (e.g., low-frequency leg-lifting vs. high-frequency jumping).
+| 输入 | 空间模态 | 频谱 | 中心频率含义 |
+|---|---|---|---|
+| 实值 `Q` | 实值 | 非负单边谱，并按 Hermitian 对称重构 | `[0,0.5]` 内的频率 |
+| 复值 `Q` | 复值 | 完整双边移位频谱 | `abs(f)` 的能量加权平均，即频率绝对值 |
+
+复值目标函数使用 `(|f|-omega(k))^2`，因此一个中心频率同时描述
+`+omega(k)` 与 `-omega(k)` 附近的能量；它不是带符号中心频率。
+
+### 基本调用
 
 ```matlab
-cd case4_MotionCapture
-MotionCapture
+[mode, info] = rvmd(Q, K, Alpha);
+[mode, info, restart] = rvmd(Q, K, Alpha, ...
+    'Weight', w, 'Tolerance', 1e-6, ...
+    'MaximumSteps', 1000, 'FPPrecision', 'double');
 ```
 
-## File Structure
+严格采用的滤波器为
 
+```text
+1 / (1 + 2*Alpha*(距中心频率的距离)^2)
 ```
-rvmd/
-├── rvmd.m                          # RVMD function
-├── functionSignatures.json         # MATLAB IDE auto-completion support
-├── LICENSE                         # MIT License
-├── case1_NonstationarySignal/
-│   └── NonstationarySignal.m       # 1D signal decomposition example
-├── case2_LorenzAttractor/
-│   ├── LorenzAttractor.m           # Lorenz system example (with restart)
-│   └── data_lorenz.mat             # Lorenz attractor data
-├── case3_CylinderWake/
-│   ├── CylinderWake.m              # Cylinder wake example
-│   └── data_cylinder.mat           # Cylinder wake velocity field data
-└── case4_MotionCapture/
-    ├── MotionCapture.m             # Motion capture example
-    ├── 49_03.bvh                   # BVH motion capture file
-    ├── loadbvh.m                   # BVH file loader
-    ├── bvh2snapshot.m              # BVH to snapshot converter
-    └── MotionCapture.avi           # Result animation
+
+不是 `1 + 4*Alpha*(...)^2`。实值分支的距离为 `f-omega(k)`，复值
+分支为 `abs(f)-omega(k)`。完整推导、离散 FFT 端点权重和共轭约定见
+[理论与验证说明](docs/theory-and-validation.md)。
+
+### 名称-值参数
+
+| 参数 | 默认值 | 说明 |
+|---|---:|---|
+| `'Weight'` | `1` | 正标量或长度为 `S` 的正向量；内部转为列向量并除以均值。 |
+| `'Tolerance'` | `5e-3` | 迭代停止阈值。 |
+| `'MaximumSteps'` | `500` | 总迭代步上限；断点续算时也不是“新增步数”。 |
+| `'InitFreqType'` | `1` | `-1` 随机、`0` 全零、`1` 均匀分布。 |
+| `'InitFreqMaximum'` | `0.5` | 初始频率上界，最高截断到 Nyquist 频率 `0.5`。 |
+| `'Device'` | `'cpu'` | `'cpu'` 或 `'gpu'`。GPU 需要 Parallel Computing Toolbox。 |
+| `'FPPrecision'` | `'single'` | `'single'` 或 `'double'`。 |
+| `'nDC'` | `0` | 固定为零中心频率的前置内部模态数，不得超过 `K`。 |
+| `'Display'` | `'off'` | `'off'` 或 `'iter'`。 |
+
+输出模态按中心频率从低到高排序。`mode.energy` 定义为每个时间系数
+的离散平方范数。`info.Iteration.omega` 保存的是排序前的内部迭代轨迹。
+
+### 断点续算
+
+```matlab
+[~, ~, state] = rvmd(Q, K, Alpha, 'MaximumSteps', 200);
+[mode, info] = rvmd('Restart', state, 'MaximumSteps', 1000);
 ```
+
+第二次调用从第 201 步继续，最多算到总计 1000 步。数据、`K`、
+`Alpha`、权重、精度、实/复值分支、初始化方式和 `nDC` 均从保存状态
+恢复，避免续算轨迹发生漂移。
+
+### “唯一”的准确含义
+
+仓库中只有 `rvmd.m` 这一份算法实现。代码还固定了每个模态的符号/
+常相位：空间模态绝对值最大的元素被规范为正实数。这样消除了输出表达
+中的任意相位，但 RVMD 目标函数仍然非凸；不同初始化或简并数据可能
+得到不同驻点，不能宣称全局优化解在数学上唯一。
 
 ## Citation
 
-If you use RVMD in your research, please cite:
+If you use RVMD, please cite:
 
-> Liao, Z.-M., Zhao, Z., Chen, L.-B., Wan, Z.-H., Liu, N.-S. & Lu, X.-Y. 2023 Reduced-order variational mode decomposition to reveal transient and non-stationary dynamics in fluid flows. *J. Fluid Mech.*, **966**, A7. [doi:10.1017/jfm.2023.435](https://doi.org/10.1017/jfm.2023.435)
+> Liao, Z.-M., Zhao, Z., Chen, L.-B., Wan, Z.-H., Liu, N.-S. & Lu,
+> X.-Y. (2023). Reduced-order variational mode decomposition to reveal
+> transient and non-stationary dynamics in fluid flows. *Journal of Fluid
+> Mechanics*, **966**, A7. https://doi.org/10.1017/jfm.2023.435
 
 ```bibtex
 @article{liao2023rvmd,
-  title={Reduced-order variational mode decomposition to reveal transient and non-stationary dynamics in fluid flows},
-  author={Liao, Z.-M. and Zhao, Z. and Chen, L.-B. and Wan, Z.-H. and Liu, N.-S. and Lu, X.-Y.},
-  journal={Journal of Fluid Mechanics},
-  volume={966},
-  pages={A7},
-  year={2023},
-  doi={10.1017/jfm.2023.435}
+  title   = {Reduced-order variational mode decomposition to reveal transient and non-stationary dynamics in fluid flows},
+  author  = {Liao, Z.-M. and Zhao, Z. and Chen, L.-B. and Wan, Z.-H. and Liu, N.-S. and Lu, X.-Y.},
+  journal = {Journal of Fluid Mechanics},
+  volume  = {966},
+  pages   = {A7},
+  year    = {2023},
+  doi     = {10.1017/jfm.2023.435}
 }
 ```
 
 ## License
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
-
----
-
-<a name="中文"></a>
-
-# 降阶变分模态分解 (RVMD)
-
-## 概述
-
-**RVMD** 是降阶变分模态分解 (Reduced-order Variational Mode Decomposition) 的 MATLAB 实现。该方法将变分模态分解 (VMD) 与低阶模态表示相结合，能够从时空数据中自适应地提取**以瞬态或非定常特性为特征的低阶动力学**。
-
-与仅处理一维信号的标准 VMD 不同，RVMD 将时空数据矩阵 **Q**（尺寸 S × T）分解为一组模态，每个模态由空间模态 **φ**、时间演化系数 **c(t)** 和特征中心频率 **ω** 组成。
-
-## 安装
-
-1. 克隆或下载本仓库。
-2. 将仓库根目录添加到 MATLAB 路径：
-   ```matlab
-   addpath('/path/to/rvmd')
-   ```
-
-CPU 计算无需额外工具箱。GPU 计算需要 Parallel Computing Toolbox。
-
-## 快速上手
-
-```matlab
-% Q: 数据矩阵，尺寸 [S, T]（S = 空间采样点数，T = 时间步数）
-% K: 提取的模态数
-% Alpha: 滤波参数（带宽控制）
-
-[mode, info] = rvmd(Q, K, Alpha);
-
-% 获取结果
-mode.phi    % 空间模态       [S x K]
-mode.c      % 时间演化系数   [T x K]
-mode.omega  % 中心频率       [K x 1]
-mode.energy % 模态能量       [1 x K]
-
-% 重构数据
-Q_rec = mode.phi * mode.c.';
-```
-
-## 接口说明
-
-```matlab
-[mode, info] = rvmd(Q, K, Alpha)
-[mode, info] = rvmd(Q, K, Alpha, Name, Value)
-[mode, info, restart] = rvmd(Q, K, Alpha, ...)
-[mode, info, restart] = rvmd('Restart', restart_data, ...)
-```
-
-### 必需参数
-
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| `Q` | 矩阵 [S × T] | 输入数据矩阵。行为空间采样点，列为时间步。 |
-| `K` | 正整数 | 提取的模态数。 |
-| `Alpha` | 正标量 | 滤波参数，控制模态带宽。值越大，带宽越窄（频率选择性越强）。 |
-
-### 可选名称-值参数
-
-| 名称 | 默认值 | 说明 |
-|------|--------|------|
-| `'Tolerance'` | `5e-3` | 迭代收敛容差。 |
-| `'MaximumSteps'` | `500` | 最大迭代步数。 |
-| `'InitFreqType'` | `1` | 中心频率初始化策略：`-1` = 随机分布，`0` = 全零，`1` = 均匀分布。 |
-| `'InitFreqMaximum'` | `0.5` | 初始中心频率上界（不超过 Nyquist 频率 0.5）。 |
-| `'Device'` | `'cpu'` | 计算设备：`'cpu'` 或 `'gpu'`。 |
-| `'FPPrecision'` | `'single'` | 浮点精度：`'single'`（单精度）或 `'double'`（双精度）。 |
-| `'Weight'` | `1` | 长度为 S 的权重向量，用于空间加权 RVMD。默认为均匀加权。 |
-| `'Restart'` | `0` | 上次调用返回的重启结构体，用于继续计算。 |
-
-### 输出
-
-| 输出 | 说明 |
-|------|------|
-| `mode.phi` | 空间模态 [S × K]，每列为单位范数的空间模态。 |
-| `mode.c` | 时间演化系数 [T × K]。 |
-| `mode.omega` | 中心频率 [K × 1]，按从低到高排序。 |
-| `mode.energy` | 模态能量 [1 × K]，定义为 ‖c_k‖²。 |
-| `info` | 包含参数设置和迭代历史的结构体（`info.Iteration.difference`，`info.Iteration.omega`，`info.Iteration.steps`）。 |
-| `restart` | （可选）保存内部状态的结构体，用于后续恢复计算。 |
-
-### 重启示例
-
-对于大规模或困难问题，可以分阶段计算：
-
-```matlab
-% 先运行 200 步
-[~, ~, restart] = rvmd(Q, K, Alpha, 'MaximumSteps', 200);
-
-% 从断点继续运行 8000 步
-[mode, info, ~] = rvmd('Restart', restart, 'MaximumSteps', 8000);
-```
-
-### 加权 RVMD 示例
-
-通过空间加权突出特定区域：
-
-```matlab
-w = ones(S, 1);
-w(region_of_interest) = 10;  % 对重要区域赋予更高权重
-[mode, info] = rvmd(Q, K, Alpha, 'Weight', w);
-```
-
-## 参数调节指南
-
-| 参数 | 作用 | 建议 |
-|------|------|------|
-| **K**（模态数） | 决定提取多少个分量。 | 从小值开始逐步增加。模态数过少会遗漏动力学特征，过多可能产生伪模态。 |
-| **Alpha**（滤波参数） | 控制模态带宽。Alpha 越大，带宽越窄。 | 常用范围：500–5000。数据频率分离度高时使用较大值。 |
-| **Tolerance**（容差） | 收敛阈值。 | 一般使用 `1e-3` 到 `1e-5`。容差越小结果越精确，但需要更多迭代。 |
-| **InitFreqMaximum** | 限制初始频率搜索范围。 | 设为略高于关注的最高频率（归一化值，最大 0.5）。 |
-
-## 算例
-
-### 算例 1：一维非定常信号
-
-对于一维信号，RVMD 退化为 VMD。本例分解包含三个频率分量和噪声的合成信号。
-
-```matlab
-cd case1_NonstationarySignal
-NonstationarySignal
-```
-
-### 算例 2：Lorenz 吸引子
-
-在混沌 Lorenz 系统数据（三维状态空间）上演示 RVMD，并展示重启功能用于长时间迭代计算。
-
-```matlab
-cd case2_LorenzAttractor
-LorenzAttractor
-```
-
-### 算例 3：瞬态圆柱绕流
-
-将 RVMD 应用于瞬态圆柱绕流的二维速度场数据，提取位移模态和不同阶段的涡脱落模态。支持 GPU 加速。
-
-```matlab
-cd case3_CylinderWake
-CylinderWake
-```
-
-### 算例 4：运动捕捉
-
-将人体运动捕捉数据分解为基于频率的分量（如低频抬腿运动 vs. 高频跳跃运动）。
-
-```matlab
-cd case4_MotionCapture
-MotionCapture
-```
-
-## 文件结构
-
-```
-rvmd/
-├── rvmd.m                          # RVMD 函数
-├── functionSignatures.json         # MATLAB IDE 自动补全支持
-├── LICENSE                         # MIT 许可证
-├── case1_NonstationarySignal/
-│   └── NonstationarySignal.m       # 一维信号分解算例
-├── case2_LorenzAttractor/
-│   ├── LorenzAttractor.m           # Lorenz 系统算例（含重启）
-│   └── data_lorenz.mat             # Lorenz 吸引子数据
-├── case3_CylinderWake/
-│   ├── CylinderWake.m              # 圆柱绕流算例
-│   └── data_cylinder.mat           # 圆柱绕流速度场数据
-└── case4_MotionCapture/
-    ├── MotionCapture.m             # 运动捕捉算例
-    ├── 49_03.bvh                   # BVH 运动捕捉文件
-    ├── loadbvh.m                   # BVH 文件加载器
-    ├── bvh2snapshot.m              # BVH 转快照工具
-    └── MotionCapture.avi           # 结果动画
-```
-
-## 引用
-
-如果您在研究中使用了 RVMD，请引用：
-
-> Liao, Z.-M., Zhao, Z., Chen, L.-B., Wan, Z.-H., Liu, N.-S. & Lu, X.-Y. 2023 Reduced-order variational mode decomposition to reveal transient and non-stationary dynamics in fluid flows. *J. Fluid Mech.*, **966**, A7. [doi:10.1017/jfm.2023.435](https://doi.org/10.1017/jfm.2023.435)
-
-```bibtex
-@article{liao2023rvmd,
-  title={Reduced-order variational mode decomposition to reveal transient and non-stationary dynamics in fluid flows},
-  author={Liao, Z.-M. and Zhao, Z. and Chen, L.-B. and Wan, Z.-H. and Liu, N.-S. and Lu, X.-Y.},
-  journal={Journal of Fluid Mechanics},
-  volume={966},
-  pages={A7},
-  year={2023},
-  doi={10.1017/jfm.2023.435}
-}
-```
-
-## 许可证
-
-本项目采用 MIT 许可证，详见 [LICENSE](LICENSE)。
+MIT; see [LICENSE](LICENSE).
