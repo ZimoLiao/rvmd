@@ -156,10 +156,11 @@ data and over-specified decompositions finite.
 
 Restart state stores the unsorted internal Gauss--Seidel order and the live
 exclusion residual, so current-format checkpoints preserve the floating-
-point trajectory exactly. Legacy states without a saved residual remain
-loadable and reconstruct it from the saved modes. On restart, `MaximumSteps`
-is the total iteration cap, not a number of additional steps. A staged run
-to steps 3 and 6 must match a single run to step 6.
+point trajectory exactly when resumed on the same device and precision.
+Legacy states without a saved residual remain loadable and reconstruct it
+from the saved modes. On restart, `MaximumSteps` is the total iteration cap,
+not a number of additional steps. A staged run to steps 3 and 6 must match a
+single run to step 6.
 
 ## Evidence ledger
 

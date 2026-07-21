@@ -139,6 +139,25 @@ verifyEqual(testCase, infoRestart.Iteration.omega, ...
     infoFull.Iteration.omega, 'AbsTol', 0);
 end
 
+function testNameValueRestartUsesSavedDefaults(testCase)
+T = 32;
+n = 0:(T - 1);
+q = [cos(2 * pi * 3 * n / T); sin(2 * pi * 7 * n / T)];
+common = {'Tolerance', 0, 'InitFreqType', 0, ...
+    'FPPrecision', 'double'};
+
+[modeFull, infoFull] = rvmd(q, 2, 30, common{:}, 'MaximumSteps', 5);
+[~, ~, state] = rvmd(q, 2, 30, common{:}, 'MaximumSteps', 2);
+[modeRestart, infoRestart] = rvmd(q, 2, 30, ...
+    'Restart', state, 'MaximumSteps', 5);
+
+verifyEqual(testCase, modeRestart.phi, modeFull.phi, 'AbsTol', 0);
+verifyEqual(testCase, modeRestart.c, modeFull.c, 'AbsTol', 0);
+verifyEqual(testCase, infoRestart.Tolerance, infoFull.Tolerance);
+verifyEqual(testCase, infoRestart.FPPrecision, 'double');
+verifyEqual(testCase, infoRestart.InitFreqType, 0);
+end
+
 function testLegacyDevelopRestartIsAccepted(testCase)
 T = 32;
 n = 0:(T - 1);
@@ -225,6 +244,9 @@ verifyError(testCase, @() rvmd(randn(2, 8), 2, 10, ...
     'MaximumSteps', 2, 'Tolerance', 0);
 verifyError(testCase, @() rvmd('Restart', state, ...
     'MaximumSteps', 1), 'rvmd:InvalidMaximumSteps');
+verifyError(testCase, @() rvmd(randn(2, 8), 2, 10, ...
+    'Restart', state, 'Weight', [1, 2]), ...
+    'rvmd:ImmutableRestartOption');
 end
 
 function qExtended = mirrorExtend(q)

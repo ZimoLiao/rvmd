@@ -52,13 +52,26 @@ else
         error('rvmd:NotEnoughInputs', ...
             'Q, K, and Alpha are required for a new decomposition.');
     end
-    [settings, restartInput] = parseNewCall(Q, K, Alpha, varargin{:});
+    [settings, restartInput, provided] = ...
+        parseNewCall(Q, K, Alpha, varargin{:});
     if isstruct(restartInput)
         restarting = true;
-        [settings, state] = parseRestartCall(restartInput, ...
-            'Tolerance', settings.Tolerance, ...
-            'MaximumSteps', settings.MaximumSteps, ...
-            'Device', settings.Device, 'Display', settings.Display);
+        if provided.Weight
+            error('rvmd:ImmutableRestartOption', ...
+                'Weight cannot be supplied with a restart state.');
+        end
+        restartArguments = {};
+        overrideNames = {'Tolerance', 'MaximumSteps', 'Device', 'Display', ...
+            'InitFreqType', 'InitFreqMaximum', 'FPPrecision', 'nDC'};
+        for optionIndex = 1:numel(overrideNames)
+            optionName = overrideNames{optionIndex};
+            if provided.(optionName)
+                restartArguments(end + (1:2)) = ...
+                    {optionName, settings.(optionName)}; %#ok<AGROW>
+            end
+        end
+        [settings, state] = parseRestartCall( ...
+            restartInput, restartArguments{:});
         Q = state.Q;
         K = state.K;
         Alpha = state.alpha;
@@ -327,7 +340,8 @@ restart.phi_n = phi;
 restart.residual_n = residual;
 end
 
-function [settings, restartInput] = parseNewCall(Q, K, Alpha, varargin)
+function [settings, restartInput, provided] = ...
+        parseNewCall(Q, K, Alpha, varargin)
 p = inputParser;
 p.FunctionName = 'rvmd';
 p.PartialMatching = false;
@@ -349,6 +363,13 @@ parse(p, Q, K, Alpha, varargin{:});
 validateProblem(Q, K, Alpha);
 settings = validateSettings(p.Results, K);
 restartInput = p.Results.Restart;
+optionNames = {'Weight', 'Tolerance', 'MaximumSteps', 'Device', 'Display', ...
+    'InitFreqType', 'InitFreqMaximum', 'FPPrecision', 'nDC'};
+provided = struct();
+for optionIndex = 1:numel(optionNames)
+    optionName = optionNames{optionIndex};
+    provided.(optionName) = ~any(strcmp(optionName, p.UsingDefaults));
+end
 end
 
 function [settings, state] = parseRestartCall(restartInput, varargin)
@@ -358,7 +379,7 @@ p.FunctionName = 'rvmd';
 p.PartialMatching = false;
 addParameter(p, 'Tolerance', state.Tolerance);
 addParameter(p, 'MaximumSteps', state.MaximumSteps);
-addParameter(p, 'Device', 'cpu');
+addParameter(p, 'Device', state.Device);
 addParameter(p, 'Display', state.Display);
 % Accepted for compatibility; restart state remains authoritative.
 addParameter(p, 'InitFreqType', state.InitFreqType);
@@ -487,6 +508,9 @@ end
 if ~isfield(state, 'Display')
     state.Display = 'off';
 end
+if ~isfield(state, 'Device')
+    state.Device = 'cpu';
+end
 
 if state.S ~= size(state.Q, 1) || state.T ~= size(state.Q, 2) || ...
         state.K ~= size(state.phi_n, 2) || ...
@@ -506,6 +530,8 @@ state.MaximumSteps = validatePositiveInteger( ...
     state.MaximumSteps, 'MaximumSteps');
 state.Display = validateChoice(state.Display, {'off', 'iter'}, ...
     'rvmd:InvalidRestart', 'Display');
+state.Device = validateChoice(state.Device, {'cpu', 'gpu'}, ...
+    'rvmd:InvalidRestart', 'Device');
 end
 
 function weight = normalizeWeight(inputWeight, S, precision)

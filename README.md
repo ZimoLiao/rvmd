@@ -136,6 +136,10 @@ sqrt(sum(abs(mode.phi).^2 .* wNormalized, 1))
 The second call continues steps 201 through at most 1000. Immutable problem
 settings (data, `K`, `Alpha`, weights, precision, real/complex branch,
 initialization, and `nDC`) come from `state`.
+The saved computation device is also reused by default; explicitly pass
+`'Device','cpu'` or `'Device','gpu'` to move the continuation. Exact
+floating-point trajectory equivalence is guaranteed when the device and
+precision are unchanged.
 
 ### Canonicalization and non-uniqueness
 
@@ -236,7 +240,9 @@ Q_rec = mode.phi * mode.c.';  % 注意这里是非共轭转置 .'
 
 第二次调用从第 201 步继续，最多算到总计 1000 步。数据、`K`、
 `Alpha`、权重、精度、实/复值分支、初始化方式和 `nDC` 均从保存状态
-恢复，避免续算轨迹发生漂移。
+恢复，避免续算轨迹发生漂移。默认也会沿用保存时的计算设备；只有显式
+传入新的 `'Device'` 才会迁移。保持设备和精度不变时，续算保持同一条
+浮点轨迹。
 
 ### “唯一”的准确含义
 
