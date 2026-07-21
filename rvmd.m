@@ -162,7 +162,6 @@ if strcmp(settings.Device, 'gpu')
     coefficientSpectrum = gpuArray(coefficientSpectrum);
     frequencyHistory = gpuArray(frequencyHistory);
     weight = gpuArray(weight);
-    frequency = gpuArray(frequency);
     absoluteFrequency = gpuArray(absoluteFrequency);
     frequencyWeight = gpuArray(frequencyWeight);
 end
@@ -360,7 +359,6 @@ if compatibility.InitFreqType ~= state.InitFreqType || ...
 end
 
 settings = struct();
-settings.Weight = state.weight;
 settings.Tolerance = validateNonnegativeScalar( ...
     p.Results.Tolerance, 'Tolerance');
 settings.MaximumSteps = validatePositiveInteger( ...
