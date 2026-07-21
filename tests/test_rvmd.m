@@ -3,6 +3,16 @@ function tests = test_rvmd
 tests = functiontests(localfunctions);
 end
 
+function setupOnce(testCase)
+testCase.TestData.OriginalPath = path;
+repositoryRoot = fileparts(fileparts(mfilename('fullpath')));
+addpath(repositoryRoot);
+end
+
+function teardownOnce(testCase)
+path(testCase.TestData.OriginalPath);
+end
+
 function testFilterCoefficientMatchesObjective(testCase)
 T = 16;
 n = 0:(T - 1);

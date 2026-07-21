@@ -227,7 +227,7 @@ while iteration <= settings.MaximumSteps && difference > settings.Tolerance
             phi(:, k) = projection / projectionNorm;
         else
             phi(:, k) = normalizedFallback( ...
-                phi(:, k), k, weight, precision, isRealInput);
+                phi(:, k), k, weight, isRealInput);
         end
         phi(:, k) = canonicalizePhase(phi(:, k), isRealInput);
 
@@ -417,7 +417,7 @@ settings.Display = validateChoice(p.Results.Display, ...
 end
 
 function validateProblem(Q, K, Alpha)
-if ~isnumeric(Q) || isempty(Q) || ndims(Q) > 2 || ...
+if ~isnumeric(Q) || isempty(Q) || ~ismatrix(Q) || ...
         ~all(isfinite(Q(:)))
     error('rvmd:InvalidData', ...
         'Q must be a nonempty, finite numeric matrix.');
@@ -588,7 +588,7 @@ switch initFreqType
 end
 end
 
-function phi = normalizedFallback(phi, k, weight, precision, isRealInput)
+function phi = normalizedFallback(phi, k, weight, isRealInput)
 phiNorm = sqrt(sum(abs(phi).^2 .* weight));
 if isPositiveFinite(phiNorm)
     phi = phi / phiNorm;
