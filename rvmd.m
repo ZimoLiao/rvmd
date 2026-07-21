@@ -53,8 +53,8 @@ else
             'Q, K, and Alpha are required for a new decomposition.');
     end
     [settings, restartInput] = parseNewCall(Q, K, Alpha, varargin{:});
-    restarting = isstruct(restartInput) && isfield(restartInput, 'Q');
-    if restarting
+    if isstruct(restartInput)
+        restarting = true;
         [settings, state] = parseRestartCall(restartInput, ...
             'Tolerance', settings.Tolerance, ...
             'MaximumSteps', settings.MaximumSteps, ...
@@ -62,8 +62,12 @@ else
         Q = state.Q;
         K = state.K;
         Alpha = state.alpha;
-    else
+    elseif isequal(restartInput, 0)
+        restarting = false;
         state = struct();
+    else
+        error('rvmd:InvalidRestart', ...
+            'Restart must be zero or a restart struct returned by RVMD.');
     end
 end
 
@@ -72,7 +76,7 @@ if restarting
     Q = cast(state.Q, precision);
     K = state.K;
     Alpha = cast(state.alpha, precision);
-    weight = normalizeWeight(state.weight, state.S, precision);
+    weight = restoreWeight(state.weight, state.S, precision);
     isRealInput = state.isRealInput;
     nDC = state.nDC;
     phi = cast(state.phi_n, precision);
@@ -107,6 +111,7 @@ QExtended(:, (half + 1):(half + T)) = Q;
 QExtended(:, (half + T + 1):end) = Q(:, T:-1:(half + 1));
 
 QSpectrum = fft(QExtended, [], 2);
+clear QExtended
 if isRealInput
     spectrumLength = T + 1;
     QSpectrum = QSpectrum(:, 1:spectrumLength);
@@ -166,8 +171,24 @@ if strcmp(settings.Device, 'gpu')
     frequencyWeight = gpuArray(frequencyWeight);
 end
 
-residual = QSpectrum - phi * coefficientSpectrum.';
+if restarting && isfield(state, 'residual_n')
+    residual = cast(state.residual_n, precision);
+    if ~isequal(size(residual), size(QSpectrum))
+        error('rvmd:InvalidRestart', ...
+            'Saved residual dimensions do not match the restart state.');
+    end
+    if strcmp(settings.Device, 'gpu')
+        residual = gpuArray(residual);
+    end
+else
+    residual = QSpectrum - phi * coefficientSpectrum.';
+end
 dataSpectrumNorm = scalarValue(norm(QSpectrum, 'fro'));
+clear QSpectrum
+scaleFloor = cast(eps(precision) * max(dataSpectrumNorm, 1), precision);
+if strcmp(settings.Device, 'gpu')
+    scaleFloor = gpuArray(scaleFloor);
+end
 iteration = completedSteps + 1;
 if completedSteps == 0
     difference = inf;
@@ -176,7 +197,7 @@ else
 end
 
 while iteration <= settings.MaximumSteps && difference > settings.Tolerance
-    differenceAccumulator = 0;
+    differenceAccumulator = zeros(1, 'like', frequencyHistory);
 
     for k = 1:K
         oldMode = phi(:, k) * coefficientSpectrum(:, k).';
@@ -218,19 +239,14 @@ while iteration <= settings.MaximumSteps && difference > settings.Tolerance
         newMode = phi(:, k) * coefficientSpectrum(:, k).';
         residual = residual - newMode;
 
-        oldNorm = scalarValue(norm(oldMode, 'fro'));
-        changeNorm = scalarValue(norm(newMode - oldMode, 'fro'));
-        scaleFloor = eps(precision) * max(dataSpectrumNorm, 1);
-        if changeNorm == 0
-            relativeChange = 0;
-        else
-            relativeChange = changeNorm / max(oldNorm, scaleFloor);
-        end
+        oldNorm = norm(oldMode, 'fro');
+        changeNorm = norm(newMode - oldMode, 'fro');
+        relativeChange = changeNorm / max(oldNorm, scaleFloor);
         differenceAccumulator = differenceAccumulator + relativeChange;
     end
 
     difference = scalarValue(differenceAccumulator);
-    differenceHistory(iteration) = cast(difference, precision);
+    differenceHistory(iteration) = differenceAccumulator;
     if strcmp(settings.Display, 'iter')
         fprintf('iteration step: %d    difference: %.8g\n', ...
             iteration, difference);
@@ -244,6 +260,7 @@ if strcmp(settings.Device, 'gpu')
     coefficientSpectrum = gather(coefficientSpectrum);
     frequencyHistory = gather(frequencyHistory);
     weight = gather(weight);
+    residual = gather(residual);
 end
 
 if isRealInput
@@ -288,7 +305,7 @@ else
         differenceHistory(completedSteps) <= settings.Tolerance;
 end
 
-restart.version = 2;
+restart.version = 3;
 restart.Q = Q;
 restart.S = S;
 restart.T = T;
@@ -307,6 +324,7 @@ restart.Display = settings.Display;
 restart.Iteration = info.Iteration;
 restart.c_spec_n = coefficientSpectrum;
 restart.phi_n = phi;
+restart.residual_n = residual;
 end
 
 function [settings, restartInput] = parseNewCall(Q, K, Alpha, varargin)
@@ -363,6 +381,10 @@ settings.Tolerance = validateNonnegativeScalar( ...
     p.Results.Tolerance, 'Tolerance');
 settings.MaximumSteps = validatePositiveInteger( ...
     p.Results.MaximumSteps, 'MaximumSteps');
+if settings.MaximumSteps < state.Iteration.steps
+    error('rvmd:InvalidMaximumSteps', ...
+        'MaximumSteps cannot be less than the completed restart steps.');
+end
 settings.InitFreqType = state.InitFreqType;
 settings.InitFreqMaximum = state.InitFreqMaximum;
 settings.Device = validateChoice(p.Results.Device, ...
@@ -487,6 +509,15 @@ state.Display = validateChoice(state.Display, {'off', 'iter'}, ...
 end
 
 function weight = normalizeWeight(inputWeight, S, precision)
+weight = expandWeight(inputWeight, S);
+weight = cast(weight / mean(weight), precision);
+end
+
+function weight = restoreWeight(inputWeight, S, precision)
+weight = cast(expandWeight(inputWeight, S), precision);
+end
+
+function weight = expandWeight(inputWeight, S)
 if ~isnumeric(inputWeight) || ~isreal(inputWeight) || ...
         isempty(inputWeight) || ~all(isfinite(inputWeight(:))) || ...
         any(inputWeight(:) <= 0) || ...
@@ -499,7 +530,6 @@ if isscalar(inputWeight)
 else
     weight = inputWeight(:);
 end
-weight = cast(weight / mean(weight), precision);
 end
 
 function phi = initialSpatialModes(S, K, weight, precision, isRealInput)

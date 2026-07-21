@@ -9,6 +9,7 @@ testWeight;
 testZeroInput;
 testComplexPhase;
 testRestart;
+testWeightedSingleRestart;
 testLegacyRestart;
 testRealFrequencies;
 testComplexFrequencies;
@@ -119,6 +120,24 @@ assert(norm(infoRestart.Iteration.difference - ...
     infoFull.Iteration.difference) < 1e-12);
 end
 
+function testWeightedSingleRestart
+T = 40;
+n = 0:(T - 1);
+q = single([cos(2 * pi * 3 * n / T); ...
+    sin(2 * pi * 7 * n / T); ...
+    0.4 * cos(2 * pi * 11 * n / T)]);
+common = {'Weight', [0.1, 0.3, 2.7], 'Tolerance', 0, ...
+    'InitFreqMaximum', 0.3, 'FPPrecision', 'single'};
+[modeFull, infoFull] = rvmd(q, 3, 40, common{:}, 'MaximumSteps', 9);
+[~, ~, state] = rvmd(q, 3, 40, common{:}, 'MaximumSteps', 4);
+[modeRestart, infoRestart] = rvmd('Restart', state, ...
+    'Tolerance', 0, 'MaximumSteps', 9);
+assert(isequal(modeRestart.phi, modeFull.phi));
+assert(isequal(modeRestart.c, modeFull.c));
+assert(isequal(modeRestart.omega, modeFull.omega));
+assert(isequal(infoRestart.Iteration.omega, infoFull.Iteration.omega));
+end
+
 function testLegacyRestart
 T = 32;
 n = 0:(T - 1);
@@ -190,6 +209,12 @@ expectError(@() rvmd(randn(2, 8), 2, 10, 'nDC', 3), ...
     'rvmd:InvalidNDC');
 expectError(@() rvmd(randn(2, 8), 2, 10, 'FPPrecision', 'half'), ...
     'rvmd:InvalidPrecision');
+expectError(@() rvmd(randn(2, 8), 2, 10, 'Restart', struct()), ...
+    'rvmd:InvalidRestart');
+[~, ~, state] = rvmd(randn(2, 8), 2, 10, ...
+    'MaximumSteps', 2, 'Tolerance', 0);
+expectError(@() rvmd('Restart', state, 'MaximumSteps', 1), ...
+    'rvmd:InvalidMaximumSteps');
 end
 
 function expectError(callable, identifier)
