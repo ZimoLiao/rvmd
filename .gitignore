@@ -1,6 +1,7 @@
-# Matlab
+# MATLAB
 *.asv
 *.jpg
 *.mat
-# Local LaTeX scratch directory formerly committed by mistake
+# Local files
 \#notes/
+.local/
