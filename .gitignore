@@ -4,6 +4,15 @@
 *.mat
 *.mat.prev
 *.mat.tmp
+*.pt
+*.pt.prev
+*.pt.tmp
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+build/
+dist/
 # Local files
 \#notes/
 .local/
