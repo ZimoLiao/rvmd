@@ -21,11 +21,6 @@
         "purpose": "bandwidth penalty in 1/(1+2*Alpha*d^2)"
       },
       {
-        "name": "Restart",
-        "kind": "namevalue",
-        "purpose": "restart state returned by rvmd"
-      },
-      {
         "name": "Weight",
         "kind": "namevalue",
         "type": ["numeric"],
@@ -74,10 +69,112 @@
         "purpose": "number of leading modes fixed at zero frequency"
       },
       {
+        "name": "InitialFrequencies",
+        "kind": "namevalue",
+        "type": ["numeric"],
+        "purpose": "optional K-vector of initial center frequencies in [0,0.5]"
+      },
+      {
         "name": "Display",
         "kind": "namevalue",
-        "type": "choices={'off','iter'}",
+        "type": "choices={'off','final','iter'}",
         "purpose": "iteration display mode"
+      },
+      {
+        "name": "DisplayInterval",
+        "kind": "namevalue",
+        "type": ["numeric", "integer", "scalar", ">0"],
+        "purpose": "iteration interval for command-window progress"
+      },
+      {
+        "name": "OutputFcn",
+        "kind": "namevalue",
+        "purpose": "callback stop = fcn(progress,phase)"
+      },
+      {
+        "name": "TimeLimit",
+        "kind": "namevalue",
+        "type": ["numeric", "scalar", ">=0"],
+        "purpose": "per-call wall-time limit in seconds"
+      },
+      {
+        "name": "CheckpointFile",
+        "kind": "namevalue",
+        "purpose": "MAT-file path for atomic periodic checkpoints"
+      },
+      {
+        "name": "CheckpointInterval",
+        "kind": "namevalue",
+        "type": ["numeric", "integer", "scalar", ">0"],
+        "purpose": "checkpoint interval in completed sweeps"
+      }
+    ]
+  },
+  "rvmdplot": {
+    "inputs": [
+      {
+        "name": "info",
+        "kind": "required",
+        "purpose": "info struct returned by rvmd"
+      },
+      {
+        "name": "SampleRate",
+        "kind": "namevalue",
+        "type": ["numeric", "scalar", ">0"],
+        "purpose": "frequency scaling from cycles per sample"
+      }
+    ]
+  },
+  "rvmdhilbert": {
+    "inputs": [
+      {
+        "name": "mode",
+        "kind": "required",
+        "purpose": "mode struct returned by rvmd"
+      },
+      {
+        "name": "sampleRate",
+        "kind": "required",
+        "type": ["numeric", "scalar", ">0"],
+        "purpose": "sampling rate in physical units"
+      },
+      {
+        "name": "ModeIndices",
+        "kind": "namevalue",
+        "type": ["numeric", "integer"],
+        "purpose": "subset of modes to analyze"
+      },
+      {
+        "name": "MirrorExtension",
+        "kind": "namevalue",
+        "purpose": "logical or finite numeric scalar controlling reflection before the transform"
+      },
+      {
+        "name": "AmplitudeThreshold",
+        "kind": "namevalue",
+        "type": ["numeric", "scalar", ">=0"],
+        "purpose": "relative threshold for meaningful instantaneous frequency"
+      },
+      {
+        "name": "FrequencyBins",
+        "kind": "namevalue",
+        "type": ["numeric", "integer", "scalar", ">0"],
+        "purpose": "number of Hilbert spectrum bins"
+      },
+      {
+        "name": "FrequencyLimits",
+        "kind": "namevalue",
+        "type": ["numeric"],
+        "purpose": "two-element Hilbert spectrum frequency range"
+      }
+    ]
+  },
+  "rvmdhilbertplot": {
+    "inputs": [
+      {
+        "name": "analysis",
+        "kind": "required",
+        "purpose": "analysis struct returned by rvmdhilbert"
       }
     ]
   }

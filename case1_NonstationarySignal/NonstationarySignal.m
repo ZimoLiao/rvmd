@@ -97,3 +97,10 @@ plot(freq,f_spec_rec(1:nk),'LineStyle','--','Color','m')
 plot(freq,c_spec(1:nk,:))
 legend('original','reconstructed','mode 1','mode 2','mode 3')
 set(gca,'XScale','log','YScale','log')
+
+%% standardized convergence and Hilbert spectral diagnostics
+sampleRate = T;  % t advances by 1/T
+rvmdplot(info, 'SampleRate', sampleRate);
+hilbertAnalysis = rvmdhilbert(mode, sampleRate, ...
+    'MirrorExtension', true, 'FrequencyBins', 256);
+rvmdhilbertplot(hilbertAnalysis);
