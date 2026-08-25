@@ -149,7 +149,7 @@ verifyEqual(testCase, infoRestart.Iteration.omega, ...
     infoFull.Iteration.omega, 'AbsTol', 0);
 end
 
-function testNameValueRestartUsesSavedDefaults(testCase)
+function testRestartUsesSavedDefaults(testCase)
 T = 32;
 n = 0:(T - 1);
 q = [cos(2 * pi * 3 * n / T); sin(2 * pi * 7 * n / T)];
@@ -158,8 +158,7 @@ common = {'Tolerance', 0, 'InitFreqType', 0, ...
 
 [modeFull, infoFull] = rvmd(q, 2, 30, common{:}, 'MaximumSteps', 5);
 [~, ~, state] = rvmd(q, 2, 30, common{:}, 'MaximumSteps', 2);
-[modeRestart, infoRestart] = rvmd(q, 2, 30, ...
-    'Restart', state, 'MaximumSteps', 5);
+[modeRestart, infoRestart] = rvmd('Restart', state, 'MaximumSteps', 5);
 
 verifyEqual(testCase, modeRestart.phi, modeFull.phi, 'AbsTol', 0);
 verifyEqual(testCase, modeRestart.c, modeFull.c, 'AbsTol', 0);
@@ -178,10 +177,12 @@ q = [cos(2 * pi * 3 * n / T); sin(2 * pi * 7 * n / T)];
     'MaximumSteps', 2, 'Tolerance', 0, 'FPPrecision', 'double');
 
 legacy = state;
+legacy.Q = cast(q, state.FPPrecision);
 legacy.steps = state.Iteration.steps;
 legacy.omega = state.Iteration.omega;
 legacy.difference = state.Iteration.difference;
-legacy = rmfield(legacy, {'version', 'Tolerance', 'MaximumSteps', ...
+legacy = rmfield(legacy, {'version', 'dataSpectrumNorm', ...
+    'InitialFrequencies', 'DisplayInterval', 'Tolerance', 'MaximumSteps', ...
     'InitFreqType', 'InitFreqMaximum', 'Device', 'FPPrecision', ...
     'nDC', 'isRealInput', 'Display', 'Iteration'});
 
@@ -199,7 +200,10 @@ q = [1 + 2i; -0.3 + 0.7i];
 [~, ~, state] = rvmd(q, 1, 0, ...
     'MaximumSteps', 1, 'Tolerance', 0, 'FPPrecision', 'double');
 
-legacy = rmfield(state, {'version', 'residual_n', 'isRealInput'});
+legacy = state;
+legacy.Q = cast(q, state.FPPrecision);
+legacy = rmfield(legacy, {'version', 'residual_n', 'dataSpectrumNorm', ...
+    'InitialFrequencies', 'DisplayInterval', 'isRealInput'});
 [modeLegacy, ~] = rvmd('Restart', legacy, ...
     'MaximumSteps', 3, 'Tolerance', 0);
 
@@ -256,6 +260,96 @@ verifyEqual(testCase, info.Iteration.omega(1, :), ...
 verifyEqual(testCase, mode.omega(1), single(0), 'AbsTol', 0);
 end
 
+function testOutputFunctionStopsAtSweepBoundaryAndRestarts(testCase)
+T = 48;
+n = 0:(T - 1);
+q = [cos(2 * pi * 3 * n / T) + 0.2 * cos(2 * pi * 9 * n / T); ...
+     sin(2 * pi * 3 * n / T) - 0.1 * cos(2 * pi * 9 * n / T)];
+common = {'Tolerance', 0, 'InitFreqType', 1, ...
+    'InitFreqMaximum', 0.25, 'FPPrecision', 'double'};
+stopAfterThree = @(progress, phase) ...
+    strcmp(phase, 'iter') && progress.step >= 3;
+
+[modeFull, infoFull] = rvmd(q, 2, 80, common{:}, 'MaximumSteps', 6);
+[~, infoStopped, state] = rvmd(q, 2, 80, common{:}, ...
+    'MaximumSteps', 10, 'OutputFcn', stopAfterThree);
+[modeRestart, infoRestart] = rvmd('Restart', state, ...
+    'Tolerance', 0, 'MaximumSteps', 6);
+
+verifyEqual(testCase, infoStopped.Iteration.steps, 3);
+verifyEqual(testCase, infoStopped.ExitFlag, -1);
+verifyEqual(testCase, infoStopped.StopReason, 'outputFunction');
+verifyEqual(testCase, modeRestart.phi, modeFull.phi, 'AbsTol', 1e-12);
+verifyEqual(testCase, modeRestart.c, modeFull.c, 'AbsTol', 1e-12);
+verifyEqual(testCase, infoRestart.Iteration.omega, ...
+    infoFull.Iteration.omega, 'AbsTol', 1e-12);
+end
+
+function testZeroTimeLimitReturnsRestartableState(testCase)
+q = reshape(sin(2 * pi * (0:31) / 8), 2, 16);
+common = {'Tolerance', 0, 'InitFreqType', 1, ...
+    'FPPrecision', 'double'};
+
+[modeFull, ~] = rvmd(q, 2, 20, common{:}, 'MaximumSteps', 4);
+[~, infoStopped, state] = rvmd(q, 2, 20, common{:}, ...
+    'MaximumSteps', 4, 'TimeLimit', 0);
+[modeRestart, ~] = rvmd('Restart', state, 'MaximumSteps', 4);
+
+verifyEqual(testCase, infoStopped.Iteration.steps, 0);
+verifyEqual(testCase, infoStopped.ExitFlag, -2);
+verifyEqual(testCase, infoStopped.StopReason, 'timeLimit');
+verifyEqual(testCase, modeRestart.phi, modeFull.phi, 'AbsTol', 1e-12);
+verifyEqual(testCase, modeRestart.c, modeFull.c, 'AbsTol', 1e-12);
+end
+
+function testCheckpointIsCompactAndRestartable(testCase)
+checkpointFile = [tempname, '.mat'];
+cleanup = onCleanup(@() deleteCheckpointFiles(checkpointFile)); %#ok<NASGU>
+T = 40;
+n = 0:(T - 1);
+q = [cos(2 * pi * 3 * n / T); sin(2 * pi * 7 * n / T)];
+common = {'Tolerance', 0, 'FPPrecision', 'double'};
+
+[modeFull, ~] = rvmd(q, 2, 30, common{:}, 'MaximumSteps', 6);
+[~, infoPart] = rvmd(q, 2, 30, common{:}, ...
+    'MaximumSteps', 3, 'CheckpointFile', checkpointFile, ...
+    'CheckpointInterval', 2);
+saved = load(checkpointFile, 'restart');
+previous = load([checkpointFile, '.prev'], 'restart');
+[modeRestart, ~] = rvmd('Restart', saved.restart, ...
+    'Tolerance', 0, 'MaximumSteps', 6);
+
+verifyEqual(testCase, infoPart.LastCheckpointStep, 3);
+verifyEqual(testCase, saved.restart.version, 4);
+verifyFalse(testCase, isfield(saved.restart, 'Q'));
+verifyTrue(testCase, isfield(saved.restart, 'dataSpectrumNorm'));
+verifyEqual(testCase, previous.restart.Iteration.steps, 2);
+verifyEqual(testCase, modeRestart.phi, modeFull.phi, 'AbsTol', 1e-12);
+verifyEqual(testCase, modeRestart.c, modeFull.c, 'AbsTol', 1e-12);
+end
+
+function testExplicitInitialFrequencies(testCase)
+q = randn(3, 24);
+initial = [0; 0.07; 0.21];
+[~, info] = rvmd(q, 3, 20, ...
+    'nDC', 1, 'InitialFrequencies', initial, ...
+    'MaximumSteps', 1, 'Tolerance', 0, 'FPPrecision', 'double');
+
+verifyEqual(testCase, info.InitialFrequencies, initial, 'AbsTol', 0);
+verifyEqual(testCase, info.Iteration.omega(:, 1), initial, 'AbsTol', 0);
+end
+
+function testRestartSyntaxAndVersionAreChecked(testCase)
+[~, ~, state] = rvmd(randn(2, 8), 2, 10, ...
+    'MaximumSteps', 1, 'Tolerance', 0);
+verifyError(testCase, @() rvmd(randn(2, 8), 2, 10, ...
+    'Restart', state), 'rvmd:RestartSyntax');
+
+state.version = 999;
+verifyError(testCase, @() rvmd('Restart', state), ...
+    'rvmd:UnsupportedRestartVersion');
+end
+
 function testInvalidInputsAreRejected(testCase)
 verifyError(testCase, @() rvmd(randn(2, 8), 2, 10, ...
     'Weight', [1, -1]), 'rvmd:InvalidWeight');
@@ -264,15 +358,25 @@ verifyError(testCase, @() rvmd(randn(2, 8), 2, 10, ...
 verifyError(testCase, @() rvmd(randn(2, 8), 2, 10, ...
     'FPPrecision', 'half'), 'rvmd:InvalidPrecision');
 verifyError(testCase, @() rvmd(randn(2, 8), 2, 10, ...
-    'Restart', struct()), 'rvmd:InvalidRestart');
+    'Restart', struct()), 'rvmd:RestartSyntax');
 
 [~, ~, state] = rvmd(randn(2, 8), 2, 10, ...
     'MaximumSteps', 2, 'Tolerance', 0);
 verifyError(testCase, @() rvmd('Restart', state, ...
     'MaximumSteps', 1), 'rvmd:InvalidMaximumSteps');
 verifyError(testCase, @() rvmd(randn(2, 8), 2, 10, ...
-    'Restart', state, 'Weight', [1, 2]), ...
-    'rvmd:ImmutableRestartOption');
+    'InitialFrequencies', [0.1, 0.2, 0.3]), ...
+    'rvmd:InvalidInitialFrequencies');
+end
+
+function deleteCheckpointFiles(checkpointFile)
+files = {checkpointFile, [checkpointFile, '.prev'], ...
+    [checkpointFile, '.tmp']};
+for index = 1:numel(files)
+    if exist(files{index}, 'file') == 2
+        delete(files{index});
+    end
+end
 end
 
 function qExtended = mirrorExtend(q)
