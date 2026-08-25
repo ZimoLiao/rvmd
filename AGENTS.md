@@ -9,6 +9,8 @@ The root-level interfaces documented by this repository are:
 - `rvmdhilbert.m`: Hilbert spectral analysis of `mode.c`.
 - `rvmdhilbertplot.m`: plots an `rvmdhilbert` result.
 - `src/rvmdpy`: matching typed Python API implemented with PyTorch.
+- `examples_python/cylinder_jfm2023.py`: complete single-device paper workflow,
+  including safe stop, restart, Hilbert analysis, plots, and reference output.
 - `examples_python/multigpu_rvmd.py`: torchrun driver for one spatially
   sharded decomposition.
 
@@ -53,6 +55,8 @@ User-facing behavior is documented in each root function's help block, in
 - Python uses the same filter, update order, center-frequency definition,
   nonconjugate reconstruction, defaults, and total-step restart semantics.
   Python option and field names use snake_case and mode indices are zero-based.
+- The installed Python package is typed and must continue to ship
+  `src/rvmdpy/py.typed`.
 - `rvmd_distributed` shards only the spatial dimension. Local `phi`, `residual`,
   and `weight` are sharded; `c`, `omega`, and iteration histories are replicated.
   The function accelerates one decomposition and is not batch parallelism.
@@ -61,6 +65,49 @@ User-facing behavior is documented in each root function's help block, in
 - A Python single-device checkpoint is one atomic `.pt` file. A distributed
   checkpoint is an atomic directory containing spatial shards and global state.
   Python checkpoints are not MATLAB restart files.
+
+## Python agent runbook
+
+Before selecting a backend, inspect the actual PyTorch environment rather than
+assuming CUDA is usable:
+
+```bash
+python -c "import torch; print(torch.__version__, torch.cuda.is_available()); print(torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'CPU')"
+```
+
+Use CPU for portability and small diagnostics, one CUDA GPU for ordinary and
+moderately large decompositions, and `rvmd_distributed` only for one spatially
+large decomposition whose matrix work dominates collective communication.
+Do not use multi-GPU execution merely to distribute independent cases.
+
+For new Python inputs, verify `Q.shape == (S,T)`, with spatial samples in rows
+and time snapshots in columns. RVMD stores frequency in cycles per sample;
+multiply `mode.omega` by the physical sample rate before comparing with a
+physical spectrum. Reconstruction always uses `mode.phi @ mode.c.T`, without a
+conjugating transpose.
+
+The canonical JFM 2023 cylinder check is:
+
+```bash
+python examples_python/cylinder_jfm2023.py --device auto \
+  --output rvmd_jfm2023_output
+```
+
+Its numerical inputs are `K=10`, `alpha=1000`, `tolerance=0.002`, sample rate
+`4`, and `linspace(0,0.15,10)` initial frequencies. The expected physical
+centers are approximately:
+
+```text
+0.00393, 0.13101, 0.13138, 0.15534, 0.15798,
+0.30595, 0.30770, 0.46666, 0.46927, 0.62652
+```
+
+For regression checks, compare final frequencies, reconstruction, and
+convergence status.
+
+For long agent-run jobs, always provide a checkpoint path and either a finite
+`time_limit` or an `output_fcn` sentinel. A graceful stop is evaluated only at
+complete-sweep boundaries. Preserve the returned restart state as opaque.
 
 ## Change guidelines
 
@@ -112,6 +159,13 @@ Run the Python suite from the repository root:
 python -m ruff check src tests_python examples_python benchmarks
 python -m ruff format --check src tests_python examples_python benchmarks
 python -m pytest tests_python
+```
+
+Smoke-test the complete paper driver without waiting for convergence:
+
+```bash
+python examples_python/cylinder_jfm2023.py --device cpu \
+  --maximum-steps 1 --no-plots --output /tmp/rvmd-jfm2023-smoke
 ```
 
 The Python suite includes CPU, checkpoint/restart, Hilbert analysis, an Octave
