@@ -1,0 +1,35 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rvmdpy"
+version = "0.1.0"
+description = "PyTorch implementation of reduced-order variational mode decomposition"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "Zimo Liao"}]
+dependencies = [
+  "numpy>=1.24",
+  "scipy>=1.10",
+  "torch>=2.2",
+]
+
+[project.optional-dependencies]
+plot = ["matplotlib>=3.7"]
+test = ["matplotlib>=3.7", "pytest>=8", "ruff>=0.8"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rvmdpy"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests_python"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
